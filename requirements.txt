@@ -1,0 +1,13 @@
+SPARQLWrapper==1.5.2
+Scrapy==0.16.4
+Twisted==12.3.0
+argparse==1.2.1
+distribute==0.6.27
+html5lib==0.95
+isodate==0.4.9
+lxml==3.1.0
+pyOpenSSL==0.13
+rdflib==3.4.0
+w3lib==1.2
+wsgiref==0.1.2
+zope.interface==4.0.5
