@@ -6,7 +6,7 @@ from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
 import sys
 import logging
 from logging import debug, error, info
-import utils.sparql
+from utils.sparql import *
 
 
 
@@ -18,7 +18,7 @@ last_update = "2010-05-06"
 senatori_added = []
 senatori_removed = []
 
-sparql = SPARQLWrapper("http://dati.senato.it/sparql-query")
+# sparql = SPARQLWrapper("http://dati.senato.it/sparql-query")
 
 query_composizione = """
 PREFIX osr: <http://dati.senato.it/osr/>
@@ -48,79 +48,84 @@ LIMIT 5
 query_composizione_today = query_composizione % (today, today)
 query_composizione_lastupdate = query_composizione % (last_update, last_update)
 
-sparql.setQuery(query_composizione_today)
-sparql.setReturnFormat(JSON)
-results_today = sparql.query().convert()
-
-sparql.setQuery(query_composizione_lastupdate)
-sparql.setReturnFormat(JSON)
-results_last_update = sparql.query().convert()
-
-for senatore in results_today["results"]["bindings"]:
-    #trova i senatori aggiunti
-    trovato = False
-    for senatore_last in results_last_update["results"]["bindings"]:
-        if senatore["senatore"]["value"] == senatore_last["senatore"]["value"]:
-            trovato = True
-            break
-    if not trovato:
-        senatori_added.append(senatore)
-
-
-for senatore in results_last_update["results"]["bindings"]:
-
-    #trova i senatori rimossi
-    trovato = False
-    for senatore_today in results_today["results"]["bindings"]:
-        if senatore["senatore"]["value"] == senatore_today["senatore"]["value"]:
-            trovato = True
-            break
-    if not trovato:
-        senatori_removed.append(senatore)
+fields = ["senatore","name","surname", "gruppo", "datafine", "datainizio"]
+results = run_query("http://dati.senato.it/sparql-query", query_composizione_today, fields )
 
 
 
-# stampa senatori aggiunti
+# sparql.setQuery(query_composizione_today)
+# sparql.setReturnFormat(JSON)
+# results_today = sparql.query().convert()
 
-print "\nSENATORI AGGIUNTI tra %s e %s \n" %( last_update, today)
-for result in senatori_added:
-    print "%s - %s - %s - %s (%s - %s)" \
-          % (result["senatore"]['value'],
-             result["name"]['value'],
-             result["surname"]['value'],
-             result["gruppo"]['value'],
-             result["datafine"]['value'],
-             result["datainizio"]['value'])
-
-
-# stampa senatori rimossi
-
-print"\nSENATORI RIMOSSI tra %s e %s \n" %( last_update, today)
-for result in senatori_removed:
-    print "%s - %s - %s - %s (%s - %s)" \
-          % (result["senatore"]['value'],
-             result["name"]['value'],
-             result["surname"]['value'],
-             result["gruppo"]['value'],
-             result["datafine"]['value'],
-             result["datainizio"]['value'])
-
-# output su file
-outputfile = open( outputfolder +"/"+ today + "_s_composizione_added",'w')
-#stampa i metadati
-for index, variable in enumerate(results_last_update["head"]["vars"]):
-    outputfile.write('"%s"' % variable)
-    if index < len(results_last_update["head"]):
-        outputfile.write(",")
-
-    outputfile.write("\n")
-
-#stampa i valori
-for senatore in senatori_added:
-    for field in senatore:
-        outputfile.write('"%s",' % field)
-
-    outputfile.write("\n")
-
-outputfile.close()
+# sparql.setQuery(query_composizione_lastupdate)
+# sparql.setReturnFormat(JSON)
+# results_last_update = sparql.query().convert()
+#
+# for senatore in results_today["results"]["bindings"]:
+#     #trova i senatori aggiunti
+#     trovato = False
+#     for senatore_last in results_last_update["results"]["bindings"]:
+#         if senatore["senatore"]["value"] == senatore_last["senatore"]["value"]:
+#             trovato = True
+#             break
+#     if not trovato:
+#         senatori_added.append(senatore)
+#
+#
+# for senatore in results_last_update["results"]["bindings"]:
+#
+#     #trova i senatori rimossi
+#     trovato = False
+#     for senatore_today in results_today["results"]["bindings"]:
+#         if senatore["senatore"]["value"] == senatore_today["senatore"]["value"]:
+#             trovato = True
+#             break
+#     if not trovato:
+#         senatori_removed.append(senatore)
+#
+#
+#
+# # stampa senatori aggiunti
+#
+# print "\nSENATORI AGGIUNTI tra %s e %s \n" %( last_update, today)
+# for result in senatori_added:
+#     print "%s - %s - %s - %s (%s - %s)" \
+#           % (result["senatore"]['value'],
+#              result["name"]['value'],
+#              result["surname"]['value'],
+#              result["gruppo"]['value'],
+#              result["datafine"]['value'],
+#              result["datainizio"]['value'])
+#
+#
+# # stampa senatori rimossi
+#
+# print"\nSENATORI RIMOSSI tra %s e %s \n" %( last_update, today)
+# for result in senatori_removed:
+#     print "%s - %s - %s - %s (%s - %s)" \
+#           % (result["senatore"]['value'],
+#              result["name"]['value'],
+#              result["surname"]['value'],
+#              result["gruppo"]['value'],
+#              result["datafine"]['value'],
+#              result["datainizio"]['value'])
+#
+# # output su file
+# outputfile = open( outputfolder +"/"+ today + "_s_composizione_added",'w')
+# #stampa i metadati
+# for index, variable in enumerate(results_last_update["head"]["vars"]):
+#     outputfile.write('"%s"' % variable)
+#     if index < len(results_last_update["head"]):
+#         outputfile.write(",")
+#
+#     outputfile.write("\n")
+#
+# #stampa i valori
+# for senatore in senatori_added:
+#     for field in senatore:
+#         outputfile.write('"%s",' % field)
+#
+#     outputfile.write("\n")
+#
+# outputfile.close()
 

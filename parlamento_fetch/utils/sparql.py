@@ -9,9 +9,9 @@ def run_query(sparql_endpoint, query, fields):
     results = sparql.query().convert()
     my_results=[]
     for r in results["results"]["bindings"]:
-        temp=[]
+        temp={}
         for field in fields:
-            temp[field]=r[field]
+            temp[field]=r[field]["value"]
 
         my_results.append(temp)
 
