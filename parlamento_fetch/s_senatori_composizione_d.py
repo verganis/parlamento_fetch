@@ -42,48 +42,51 @@ FILTER(str(?datainizio) <= '%s')
 }
 
 ORDER BY ?surname
-LIMIT 5
 """
 
 query_composizione_today = query_composizione % (today, today)
 query_composizione_lastupdate = query_composizione % (last_update, last_update)
 
-fields = ["senatore","name","surname", "gruppo", "datafine", "datainizio"]
-results = run_query("http://dati.senato.it/sparql-query", query_composizione_today, fields )
+fields_today = ["senatore","name","surname", "gruppo", "datafine", "datainizio"]
+fields_lastupdate = fields_today
+
+results_today = run_query(sparql_senato, query_composizione_today, fields_today )
+results_lastupdate = run_query(sparql_senato, query_composizione_lastupdate, fields_lastupdate)
+
+
+write_to_file("results_today",fields_today, results_today)
+write_to_file("results_lastup",fields_today, results_lastupdate )
+
+
+for senatore in results_today:
+    #trova i senatori aggiunti
+    trovato = False
+    for senatore_last in results_lastupdate:
+        if senatore["senatore"] == senatore_last["senatore"]:
+            trovato = True
+            break
+    if not trovato:
+        senatori_added.append(senatore)
+
+
+for senatore in results_lastupdate:
+
+    #trova i senatori rimossi
+    trovato = False
+    for senatore_today in results_today:
+        if senatore["senatore"] == senatore_today["senatore"]:
+            trovato = True
+            break
+    if not trovato:
+        senatori_removed.append(senatore)
+
+
+write_to_file("senatoririmossi",fields_today, senatori_removed)
+write_to_file("senatoriaggiunti",fields_today, senatori_added)
 
 
 
-# sparql.setQuery(query_composizione_today)
-# sparql.setReturnFormat(JSON)
-# results_today = sparql.query().convert()
 
-# sparql.setQuery(query_composizione_lastupdate)
-# sparql.setReturnFormat(JSON)
-# results_last_update = sparql.query().convert()
-#
-# for senatore in results_today["results"]["bindings"]:
-#     #trova i senatori aggiunti
-#     trovato = False
-#     for senatore_last in results_last_update["results"]["bindings"]:
-#         if senatore["senatore"]["value"] == senatore_last["senatore"]["value"]:
-#             trovato = True
-#             break
-#     if not trovato:
-#         senatori_added.append(senatore)
-#
-#
-# for senatore in results_last_update["results"]["bindings"]:
-#
-#     #trova i senatori rimossi
-#     trovato = False
-#     for senatore_today in results_today["results"]["bindings"]:
-#         if senatore["senatore"]["value"] == senatore_today["senatore"]["value"]:
-#             trovato = True
-#             break
-#     if not trovato:
-#         senatori_removed.append(senatore)
-#
-#
 #
 # # stampa senatori aggiunti
 #

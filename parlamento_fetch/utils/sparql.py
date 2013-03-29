@@ -1,6 +1,9 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
 from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
 
+sparql_senato = "http://dati.senato.it/sparql-query"
+sparql_camera = "http://dati.camera.it/sparql"
+
 
 def run_query(sparql_endpoint, query, fields):
     sparql = SPARQLWrapper(sparql_endpoint)
