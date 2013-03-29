@@ -15,5 +15,26 @@ def run_query(sparql_endpoint, query, fields):
 
         my_results.append(temp)
 
-
     return my_results
+
+
+def write_to_file(filename,fields, results):
+
+    # output su file
+    outputfile = open( filename,'w')
+    #stampa i metadati
+    for index, variable in enumerate(fields):
+        outputfile.write('"%s"' % variable)
+        if index < len(fields):
+            outputfile.write(",")
+
+    outputfile.write("\n")
+
+    #stampa i valori
+    for r in results:
+        for field in fields:
+            outputfile.write('"%s",' % r[field])
+
+        outputfile.write("\n")
+
+    outputfile.close()
