@@ -1,24 +1,12 @@
 # a partire da due date verifica le differenze fra i senatori in carica a data1 e data2 e salva due file
 # AAAAMMGG-senatori_added e AAAAMMGG-senatori_removed con le differenze
-
-from SPARQLWrapper import SPARQLWrapper, JSON
-from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
-import sys
-import logging
-from logging import debug, error, info
 from utils.sparql import *
 
-
-
-
-outputfolder = "/home/nishant/workspace/parlamento_fetch/parlamento_fetch/output"
 today = "2013-03-13"
 last_update = "2010-05-06"
 
 senatori_added = []
 senatori_removed = []
-
-# sparql = SPARQLWrapper("http://dati.senato.it/sparql-query")
 
 query_composizione = """
 PREFIX osr: <http://dati.senato.it/osr/>
@@ -53,11 +41,6 @@ fields_lastupdate = fields_today
 results_today = run_query(sparql_senato, query_composizione_today, fields_today )
 results_lastupdate = run_query(sparql_senato, query_composizione_lastupdate, fields_lastupdate)
 
-
-write_to_file("results_today",fields_today, results_today)
-write_to_file("results_lastup",fields_today, results_lastupdate )
-
-
 for senatore in results_today:
     #trova i senatori aggiunti
     trovato = False
@@ -81,8 +64,6 @@ for senatore in results_lastupdate:
         senatori_removed.append(senatore)
 
 
-write_to_file("senatoririmossi",fields_today, senatori_removed)
-write_to_file("senatoriaggiunti",fields_today, senatori_added)
-
-
+write_to_file(output_folder+"s_composizione_removed",fields_today, senatori_removed)
+write_to_file(output_folder+"s_composizione_added",fields_today, senatori_added)
 
