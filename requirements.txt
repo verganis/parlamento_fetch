@@ -3,6 +3,7 @@ Scrapy==0.16.4
 Twisted==12.3.0
 argparse==1.2.1
 distribute==0.6.27
+elementtree==1.2.7-20070827-preview
 html5lib==0.95
 isodate==0.4.9
 lxml==3.1.0
