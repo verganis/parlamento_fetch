@@ -48,7 +48,7 @@ def do_something(args):
                PREFIX persona: <http://dati.camera.it/ocd/persona>
                PREFIX atto: <http://dati.camera.it/ocd/attocamera.rdf/>
 
-            SELECT ?p ?v
+            SELECT ?property ?value
             WHERE
             {
               ?atto a <http://dati.camera.it/ocd/atto> .
