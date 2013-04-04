@@ -1,4 +1,5 @@
 from SPARQLWrapper import SPARQLWrapper, JSON, XML, RDF
+import csv
 from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
 import elementtree.ElementTree as ET
 import sys
@@ -31,44 +32,47 @@ else:
     src = sys.stdin
 
 
-def run_query(sparql_endpoint, query, fields):
+
+def run_query(sparql_endpoint, query):
     sparql = SPARQLWrapper(sparql_endpoint)
     sparql.setQuery(query)
-    sparql.setReturnFormat(XML)
-    results = sparql.queryAndConvert()
-    return results.toprettyxml()
+    sparql.setReturnFormat(JSON)
+    results = sparql.query().convert()
+    my_results=[]
+    if results:
 
+        for r in results["results"]["bindings"]:
+            fields = r.keys()
+            temp={}
+            for field in fields:
+                temp[field]=r[field]["value"]
+
+            my_results.append(temp)
+
+        return my_results
+    else:
+        return None
 
 
 def write_file(filename, results):
 
-    # output su file
-    outputfile = open(filename,'w')
-    outputfile.write("%s" %results)
-    outputfile.close()
-
-
-
-def write_csv(filename,fields, results):
-
-    # output su file
-    outputfile = open(filename,'w')
-    #stampa i metadati
-    for index, variable in enumerate(fields):
-        outputfile.write('"%s"' % variable)
-        if index < len(fields):
-            outputfile.write(",")
-
-    outputfile.write("\n")
-
-    #stampa i valori
-    for r in results:
-        for field in fields:
-            if field in r.keys():
-                outputfile.write('"%s",' % unicode(r[field]).encode("utf-8"))
-            else:
-                outputfile.write('"",')
+    if results:
+        # output su file
+        outputfile = open( filename,'w')
+        fields= results[0].keys()
+        #stampa i metadati
+        for index, variable in enumerate(fields):
+            outputfile.write('"%s"' % variable)
+            if index < len(fields):
+                outputfile.write(",")
 
         outputfile.write("\n")
 
-    outputfile.close()
+        #stampa i valori
+        for r in results:
+            for field in fields:
+                outputfile.write('"%s",' % r[field])
+
+            outputfile.write("\n")
+
+        outputfile.close()
