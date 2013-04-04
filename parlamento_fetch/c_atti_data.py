@@ -52,7 +52,7 @@ def do_something(args):
             WHERE
             {
               ?atto a <http://dati.camera.it/ocd/atto> .
-              ?atto ?p ?v
+              ?atto ?property ?value
               FILTER(substr(str(?atto), 42) = '%s')
             }
             """ % atto["atto"]
