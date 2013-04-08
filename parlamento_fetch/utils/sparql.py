@@ -9,6 +9,19 @@ sparql_senato = "http://dati.senato.it/sparql-query"
 sparql_camera = "http://dati.camera.it/sparql"
 output_folder = "/home/nishant/workspace/parlamento_fetch/parlamento_fetch/output/"
 
+prefix_separator = "_"
+senato_prefix = "s"
+camera_prefix = "c"
+atti_prefix = "a"
+votazioni_prefix ="v"
+incarichi_prefix = "i"
+composizione_prefix = "composizione"
+aggiunte_prefix = "aggiunte"
+rimozioni_prefix = "rimozioni"
+cambi_gruppo_prefix = "cgruppo"
+cariche_prefix = "cariche"
+
+
 
 # indents XML file to achieve prettyprint format
 def indent(elem, level=0):
@@ -33,6 +46,23 @@ else:
 
 
 
+
+def run_query2(sparql_endpoint, query):
+    sparql = SPARQLWrapper(sparql_endpoint)
+    sparql.setQuery(query)
+    sparql.setReturnFormat(XML)
+    results = sparql.queryAndConvert()
+    return results.toprettyxml()
+
+
+def write_file2(filename, results):
+
+    # output su file
+    outputfile = open(filename,'w')
+    outputfile.write("%s" %results)
+    outputfile.close()
+
+
 def run_query(sparql_endpoint, query):
     sparql = SPARQLWrapper(sparql_endpoint)
     sparql.setQuery(query)
@@ -40,7 +70,6 @@ def run_query(sparql_endpoint, query):
     results = sparql.query().convert()
     my_results=[]
     if results:
-
         for r in results["results"]["bindings"]:
             fields = r.keys()
             temp={}
@@ -50,6 +79,7 @@ def run_query(sparql_endpoint, query):
             my_results.append(temp)
 
         return my_results
+        # return results["results"]["bindings"]
     else:
         return None
 
@@ -58,8 +88,9 @@ def write_file(filename, results):
 
     if results:
         # output su file
-        outputfile = open( filename,'w')
+        outputfile = open(filename,'w')
         fields= results[0].keys()
+        fields = ["s","p","o"]
         #stampa i metadati
         for index, variable in enumerate(fields):
             outputfile.write('"%s"' % variable)
@@ -71,7 +102,7 @@ def write_file(filename, results):
         #stampa i valori
         for r in results:
             for field in fields:
-                outputfile.write('"%s",' % r[field])
+                outputfile.write('"%s",' % unicode(r[field]).encode("utf-8"))
 
             outputfile.write("\n")
 
