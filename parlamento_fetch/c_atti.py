@@ -10,127 +10,91 @@ def do_fetch(args):
 
     for today in args:
 
+        query_atti="""
 
-        query_construct="""
             PREFIX ocd: <http://dati.camera.it/ocd/>
             PREFIX dc: <http://purl.org/dc/elements/1.1/>
             PREFIX creator: <http://purl.org/dc/elements/1.1/creator>
             PREFIX persona: <http://dati.camera.it/ocd/persona>
+            PREFIX atto: <http://dati.camera.it/ocd/attocamera.rdf/>
 
-            CONSTRUCT
-            {
-            ?atto a <http://dati.camera.it/ocd/atto>.
-            ?atto dc:date ?date .
-            ?atto dc:title ?title .
 
-            ?atto ocd:primo_firmatario ?primo_firmatario.
-            ?atto ocd:altro_firmatario ?altro_firmatario.
-            ?atto ocd:rif_richiestaParere ?rif_richiestaParere.
-            ?atto ocd:rif_relatore ?rif_relatore.
-            }
+            SELECT DISTINCT  SUBSTR(str(?atto),42) AS ?atto
+
             WHERE
             {
+              ?atto a <http://dati.camera.it/ocd/atto> .
+              ?atto dc:date ?date .
 
-            ?atto a <http://dati.camera.it/ocd/atto> .
-            ?atto dc:date ?date .
-            ?atto dc:title ?title .
-            OPTIONAL{?atto ocd:primo_firmatario ?primo_firmatario.}
-            OPTIONAL{?atto ocd:altro_firmatario ?altro_firmatario.}
-            OPTIONAL{?atto ocd:rif_richiestaParere ?rif_richiestaParere.}
-            OPTIONAL{?atto ocd:rif_relatore ?rif_relatore.}
 
-            FILTER(str(?date) = '%s')
+
+              FILTER(substr(?date, 1, 8) = '%s')
             }
-            ORDER BY SUBSTR(str(?atto),42)
-        """ % today
+            """ % today
 
-        results_constr = run_query(sparql_camera, query_construct)
-        write_file(output_folder+atti_prefix+"query_constr_"+today,results_constr)
+        results_atti = run_query(sparql_camera, query_atti)
+        write_file(output_folder+"c_atti_"+today,results_atti)
 
-        query_test="""
-            PREFIX ocd: <http://dati.camera.it/ocd/>
-            PREFIX dc: <http://purl.org/dc/elements/1.1/>
-            PREFIX creator: <http://purl.org/dc/elements/1.1/creator>
-            PREFIX persona: <http://dati.camera.it/ocd/persona>
+        # per ogni atto trovato estrae tutti i dettagli e li mette in un file
+        for atto in results_atti:
 
-            CONSTRUCT
-            {
-            ?atto a <http://dati.camera.it/ocd/atto>.
-            ?atto dc:date ?date .
-            ?atto dc:title ?title .
+            query_atto="""
+                PREFIX ocd: <http://dati.camera.it/ocd/>
+                PREFIX dc: <http://purl.org/dc/elements/1.1/>
+                PREFIX creator: <http://purl.org/dc/elements/1.1/creator>
+                PREFIX persona: <http://dati.camera.it/ocd/persona>
 
-            ?atto ocd:primo_firmatario ?primo_firmatario.
-            ?atto ocd:altro_firmatario ?altro_firmatario.
-            ?atto ocd:rif_richiestaParere ?rif_richiestaParere.
-            ?atto ocd:rif_relatore ?rif_relatore.
-            }
-            WHERE
-            {
+                CONSTRUCT
+                {
+                ?atto a <http://dati.camera.it/ocd/atto>.
+                ?atto dc:date ?date .
+                ?atto dc:title ?title .
 
-            ?atto a <http://dati.camera.it/ocd/atto> .
-            ?atto dc:date ?date .
-            ?atto dc:title ?title .
-            OPTIONAL{?atto ocd:primo_firmatario ?primo_firmatario.}
-            OPTIONAL{?atto ocd:altro_firmatario ?altro_firmatario.}
-            OPTIONAL{?atto ocd:rif_richiestaParere ?rif_richiestaParere.}
-            OPTIONAL{?atto ocd:rif_relatore ?rif_relatore.}
+                ?atto ocd:primo_firmatario ?primo_firmatario.
+                ?atto ocd:altro_firmatario ?altro_firmatario.
+                ?atto ocd:rif_richiestaParere ?rif_richiestaParere.
+                ?atto ocd:rif_relatore ?rif_relatore.
+                ?atto ocd:rif_assegnazione ?rif_assegnazione.
+                ?rif_assegnazione ocd:sede ?sedeAssegnazione.
+                ?atto ocd:rif_statoIter ?rif_statoIter.
+                ?rif_statoIter ocd:title ?titoloIter.
+                ?rif_statoIter ocd:date ?dataIter.
+                ?atto ocd:rif_trasmissione ?rif_trasmissione.
 
-            FILTER(SUBSTR(str(?atto),42) = 'ac16_4007')
-            }
-            GROUP BY SUBSTR(str(?atto),42)
-        """
+                }
+                WHERE
+                {
 
-        results_test = run_query(sparql_camera, query_test)
-        write_file(output_folder+atti_prefix+"query_test_"+"ac16_4007",results_test)
+                ?atto a <http://dati.camera.it/ocd/atto> .
+                ?atto dc:date ?date .
+                ?atto dc:title ?title .
 
-        # query_atti="""
-        #
-        #     PREFIX ocd: <http://dati.camera.it/ocd/>
-        #     PREFIX dc: <http://purl.org/dc/elements/1.1/>
-        #     PREFIX creator: <http://purl.org/dc/elements/1.1/creator>
-        #     PREFIX persona: <http://dati.camera.it/ocd/persona>
-        #     PREFIX atto: <http://dati.camera.it/ocd/attocamera.rdf/>
-        #
-        #
-        #     SELECT DISTINCT
-        #         SUBSTR(str(?atto),42) AS ?atto
-        #         SUBSTR(str(?rif_leg),54) AS ?rif_leg
-        #
-        #
-        #     WHERE
-        #     {
-        #       ?atto a <http://dati.camera.it/ocd/atto> .
-        #       ?atto dc:date ?date .
-        #       ?atto ocd:rif_leg ?rif_leg.
-        #       FILTER(substr(?date, 1, 8) = '%s')
-        #     }
-        #     """ % today
-        #
-        # results_atti = run_query(sparql_camera, query_atti)
-        # write_file(output_folder+atti_prefix+camera_prefix+results_atti[0]["rif_leg"]+prefix_separator+today,results_atti)
-        #
-        # # per ogni atto trovato estrae tutti i dettagli e li mette in un file
-        # for atto in results_atti:
-        #
-        #     query_dettaglio="""
-        #
-        #     PREFIX ocd: <http://dati.camera.it/ocd/>
-        #        PREFIX dc: <http://purl.org/dc/elements/1.1/>
-        #        PREFIX creator: <http://purl.org/dc/elements/1.1/creator>
-        #        PREFIX persona: <http://dati.camera.it/ocd/persona>
-        #        PREFIX atto: <http://dati.camera.it/ocd/attocamera.rdf/>
-        #
-        #     SELECT ?property ?value
-        #     WHERE
-        #     {
-        #       ?atto a <http://dati.camera.it/ocd/atto> .
-        #       ?atto ?property ?value.
-        #       FILTER(substr(str(?atto), 42) = '%s')
-        #     }
-        #     """ % atto["atto"]
-        #
-        #     results_dettaglio = run_query(sparql_camera, query_dettaglio)
-        #     write_file(output_folder+atto["atto"],results_dettaglio)
+                ?atto ocd:rif_statoIter ?rif_statoIter.
+                ?rif_statoIter a <http://dati.camera.it/ocd/statoIter>.
+                ?rif_statoIter dc:date ?dataIter.
+                ?rif_statoIter dc:title ?titoloIter.
+
+                OPTIONAL{?atto ocd:primo_firmatario ?primo_firmatario.}
+                OPTIONAL{?atto ocd:altro_firmatario ?altro_firmatario.}
+                OPTIONAL{?atto ocd:rif_richiestaParere ?rif_richiestaParere.}
+                OPTIONAL{?atto ocd:rif_relatore ?rif_relatore.}
+                OPTIONAL{
+                    ?atto ocd:rif_assegnazione ?rif_assegnazione.
+                    ?rif_assegnazione a ocd:assegnazione .
+                    ?rif_assegnazione ocd:sede ?sedeAssegnazione.
+                }
+                OPTIONAL{
+                    ?atto ocd:rif_trasmissione ?rif_trasmissione.
+
+                }
+
+                FILTER(substr(str(?atto),42) = '%s')
+                }
+
+            """ % atto["atto"]
+
+            results_atto = run_query(sparql_camera, query_atto)
+            write_file(output_folder+atto["atto"],results_atto, ["s","p","o"], False)
 
 
 def main(args):
