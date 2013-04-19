@@ -60,6 +60,8 @@ def do_fetch(args):
                 ?rif_statoIter ocd:title ?titoloIter.
                 ?rif_statoIter ocd:date ?dataIter.
                 ?atto ocd:rif_trasmissione ?rif_trasmissione.
+                ?rif_trasmissione ocd:rif_attoSenato ?rif_attoSenato.
+                ?atto ocd:rif_dibattito ?rif_dibattito.
 
                 }
                 WHERE
@@ -85,6 +87,12 @@ def do_fetch(args):
                 }
                 OPTIONAL{
                     ?atto ocd:rif_trasmissione ?rif_trasmissione.
+                    ?rif_transmissione a ocd:trasmissione.
+                    ?rif_trasmissione ocd:rif_attoSenato ?rif_attoSenato.
+
+                }
+                OPTIONAL {
+                    ?atto ocd:rif_dibattito ?rif_dibattito.
 
                 }
 

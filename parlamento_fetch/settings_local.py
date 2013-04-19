@@ -1,0 +1,1 @@
+output_folder = "/home/nishant/workspace/parlamento_fetch/parlamento_fetch/output/"

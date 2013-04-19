@@ -1,69 +1,76 @@
-# a partire da due date verifica le differenze fra i senatori in carica a data1 e data2 e salva due file
-# AAAAMMGG-senatori_added e AAAAMMGG-senatori_removed con le differenze
-from utils.sparql import *
+# confronta la composizione attuale con il file di composizione piu' recente trovato
+# manda una mail con le differenze tra i file (aggiunte e cancellazioni)
 
-today = "2013-03-13"
-last_update = "2010-05-06"
+from utils.sparql import *
+from settings import *
+
+from datetime import date
+import os
+import glob
+
+# no_file si attiva se non ci sono file precedenti di riferimento
+no_file = False
+today_str = date.today().strftime(date_format)
+
+# trova il file di composizione senato piu' recente con prefisso stabilito
+file_prefix = senato_prefix + prefix_separator + composizione_prefix
+filelist = glob.glob(output_folder + file_prefix + '*')
+filelist = filter(lambda x: not os.path.isdir(x), filelist)
+if filelist:
+    newest = max(filelist, key=lambda x: os.stat(x).st_mtime)
+else:
+    no_file = True
 
 senatori_added = []
 senatori_removed = []
 
+
+# prende la lista dei senatori senza data di fine mandato e li mette in results
+
 query_composizione = """
-PREFIX osr: <http://dati.senato.it/osr/>
-PREFIX ocd: <http://dati.camera.it/ocd/>
-select distinct ?senatore ?name ?surname ?gruppo ?datafine ?datainizio
-where
-{
-?senatore a osr:Senatore.
-?senatore foaf:firstName ?name.
-?senatore foaf:lastName ?surname.
-?senatore ocd:aderisce ?adesione.
+    PREFIX osr: <http://dati.senato.it/osr/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX ocd:<http://dati.camera.it/ocd/>
 
-?adesione a ocd:adesioneGruppo.
-?adesione osr:inizio ?datainizio.
-?adesione osr:fine ?datafine.
-?adesione osr:legislatura ?leg.
-?adesione osr:gruppo ?gruppo.
+    SELECT DISTINCT
+    ?senatore ?nome ?cognome
+    ?inizioMandato ?fineMandato
+    ?tipoMandato
+    ?id_gruppo ?inizioAdesione ?fineAdesione ?nomeGruppo
 
-FILTER(str(?datafine) > '%s').
-FILTER(str(?datainizio) <= '%s')
-}
+    WHERE {
+    ?senatore a osr:Senatore.
+    ?senatore foaf:firstName ?nome.
+    ?senatore foaf:lastName ?cognome.
+    ?senatore ocd:aderisce ?aderisce.
+    ?senatore osr:mandato ?mandato.
+    ?mandato osr:legislatura ?legislaturaMandato.
+    ?mandato osr:inizio ?inizioMandato.
+    ?mandato osr:tipoMandato ?tipoMandato.
+    OPTIONAL { ?mandato osr:fine ?fineMandato. }
 
-ORDER BY ?surname
-"""
+    ?aderisce osr:legislatura ?legislaturaAdesione.
+    ?aderisce osr:gruppo ?id_gruppo.
+    ?aderisce osr:inizio ?inizioAdesione.
+    OPTIONAL { ?aderisce osr:fine ?fineAdesione.}
 
-query_composizione_today = query_composizione % (today, today)
-query_composizione_lastupdate = query_composizione % (last_update, last_update)
+    ?id_gruppo osr:denominazione ?denGruppo.
+    ?denGruppo osr:titolo ?nomeGruppo.
 
-fields_today = ["senatore","name","surname", "gruppo", "datafine", "datainizio"]
-fields_lastupdate = fields_today
+    FILTER(str(?legislaturaMandato)='%s')
+    FILTER(str(?legislaturaAdesione)='%s')
 
-results_today = run_query(sparql_senato, query_composizione_today, fields_today )
-results_lastupdate = run_query(sparql_senato, query_composizione_lastupdate, fields_lastupdate)
+    } ORDER BY ?cognome ?nome
+""" % (16,16)
 
-for senatore in results_today:
-    #trova i senatori aggiunti
-    trovato = False
-    for senatore_last in results_lastupdate:
-        if senatore["senatore"] == senatore_last["senatore"]:
-            trovato = True
-            break
-    if not trovato:
-        senatori_added.append(senatore)
+results = run_query(sparql_senato, query_composizione)
 
 
-for senatore in results_lastupdate:
-
-    #trova i senatori rimossi
-    trovato = False
-    for senatore_today in results_today:
-        if senatore["senatore"] == senatore_today["senatore"]:
-            trovato = True
-            break
-    if not trovato:
-        senatori_removed.append(senatore)
+# per ogni senatore va a prendere il gruppo di appartenenza e lo aggiunge al dizionario del senatore
 
 
-write_to_file(output_folder+"s_composizione_removed",fields_today, senatori_removed)
-write_to_file(output_folder+"s_composizione_added",fields_today, senatori_added)
+fields = ["senatore", "nome", "cognome", "inizioMandato", "fineMandato", "tipoMandato","inizioAdesione","fineAdesione","id_gruppo","nomeGruppo"]
+write_file(output_folder +file_prefix+today_str, results, fields, True)
+
+
 
