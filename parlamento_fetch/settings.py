@@ -1,7 +1,7 @@
 sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
 date_format='%Y%m%d'
-legislatura_id ='16'
+legislatura_id ='17'
 
 prefix_separator = "_"
 senato_prefix = "s"
@@ -25,3 +25,5 @@ notification_system={
 }
 
 smtp_server = 'SMTP SERVER ADDRESS'
+
+no_difference_msg="Nessuna differenza rilevata"

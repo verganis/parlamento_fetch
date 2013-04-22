@@ -7,8 +7,6 @@ import sys
 import difflib
 import smtplib
 from email.mime.text import MIMEText
-from settings_local import notification_system, smtp_server
-
 
 # indents XML file to achieve prettyprint format
 def indent(elem, level=0):
@@ -102,7 +100,7 @@ def create_diff(filename1, filename2):
 
 
 
-def send_email(address_list, subject, content):
+def send_email(smtp_server, notification_system, address_list, subject, content):
 
     msg = MIMEText(content)
     msg['Subject'] = subject

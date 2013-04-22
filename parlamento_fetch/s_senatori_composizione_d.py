@@ -7,10 +7,14 @@ from datetime import date
 import os
 import glob
 import difflib
+from settings_local import notification_system, smtp_server
+
 
 # no_file si attiva se non ci sono file precedenti di riferimento
 no_file = False
+
 today_str = date.today().strftime(date_format)
+mail_subject = "Differenze Composizione Senato al "+today_str
 
 # trova il file di composizione senato piu' recente con prefisso stabilito
 file_prefix = senato_prefix + prefix_separator + composizione_prefix
@@ -73,9 +77,9 @@ fields = ["senatore", "nome", "cognome",
           "id_gruppo","adesioneCarica", "tipoMandato"]
 write_file(today_filename, results, fields, True)
 
-
-newest_filename=today_filename+"_t"
 msg = create_diff(today_filename, newest_filename)
+if msg == "":
+    msg=no_difference_msg
 
-send_email(notification_list,"composizione senato",msg)
+send_email(smtp_server, notification_system,notification_list,mail_subject,msg)
 
