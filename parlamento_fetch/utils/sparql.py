@@ -1,8 +1,10 @@
+from string import join
 from SPARQLWrapper import SPARQLWrapper, JSON, XML, RDF
 import csv
 from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
 import elementtree.ElementTree as ET
 import sys
+import difflib
 
 # indents XML file to achieve prettyprint format
 def indent(elem, level=0):
@@ -24,24 +26,6 @@ if len(sys.argv) > 1:
     src = sys.argv[1]
 else:
     src = sys.stdin
-
-
-
-
-def run_query2(sparql_endpoint, query):
-    sparql = SPARQLWrapper(sparql_endpoint)
-    sparql.setQuery(query)
-    sparql.setReturnFormat(XML)
-    results = sparql.queryAndConvert()
-    return results.toprettyxml()
-
-
-def write_file2(filename, results):
-
-    # output su file
-    outputfile = open(filename,'w')
-    outputfile.write("%s" %results)
-    outputfile.close()
 
 
 def run_query(sparql_endpoint, query):
@@ -91,3 +75,23 @@ def write_file(filename, results,fields=None,print_metadata=True):
             outputfile.write("\n")
 
         outputfile.close()
+
+
+def create_diff(filename1, filename2):
+
+    with open(filename1, 'r') as file1:
+        content1 = file1.read().splitlines()
+    with open(filename2, 'r') as file2:
+        content2 = file2.read().splitlines()
+
+    # trova le differenze fra i due file
+
+    diff = difflib.unified_diff(
+        content1,
+        content2,
+        n=0,
+        fromfile=filename1,
+        tofile=filename2,
+        lineterm='')
+
+    return '\n'.join(list(diff))

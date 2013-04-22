@@ -3,7 +3,7 @@ from settings_local import *
 sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
 date_format='%Y%m%d'
-legislatura_id ='17'
+legislatura_id ='16'
 
 prefix_separator = "_"
 senato_prefix = "s"
