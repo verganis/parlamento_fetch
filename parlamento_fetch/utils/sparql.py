@@ -5,6 +5,10 @@ from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
 import elementtree.ElementTree as ET
 import sys
 import difflib
+import smtplib
+from email.mime.text import MIMEText
+from settings_local import notification_system, smtp_server
+
 
 # indents XML file to achieve prettyprint format
 def indent(elem, level=0):
@@ -95,3 +99,18 @@ def create_diff(filename1, filename2):
         lineterm='')
 
     return '\n'.join(list(diff))
+
+
+
+def send_email(address_list, subject, content):
+
+    msg = MIMEText(content)
+    msg['Subject'] = subject
+    msg['From'] = notification_system['name']
+    msg['To'] = "Admin"
+
+    # Send the message via our own SMTP server, but don't include the
+    # envelope header.
+    s = smtplib.SMTP(smtp_server)
+    s.sendmail(notification_system['name'], [address_list], msg.as_string())
+    s.quit()

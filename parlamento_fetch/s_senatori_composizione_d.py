@@ -2,7 +2,7 @@
 # manda una mail con le differenze tra i file (aggiunte e cancellazioni)
 
 from utils.sparql import *
-from settings import *
+from settings_local import *
 from datetime import date
 import os
 import glob
@@ -75,6 +75,7 @@ write_file(today_filename, results, fields, True)
 
 
 newest_filename=today_filename+"_t"
-print create_diff(today_filename, newest_filename)
+msg = create_diff(today_filename, newest_filename)
 
+send_email(notification_list,"composizione senato",msg)
 

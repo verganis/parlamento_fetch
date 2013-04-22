@@ -1,5 +1,3 @@
-from settings_local import *
-
 sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
 date_format='%Y%m%d'
@@ -17,3 +15,13 @@ rimozioni_prefix = "rimozioni"
 cambi_gruppo_prefix = "cgruppo"
 cariche_prefix = "cariche"
 
+notification_list=[
+    "MAIL",
+    ]
+
+notification_system={
+    "name":"Parlamento_fetch",
+    "mail":"noreply@openpolis.it"
+}
+
+smtp_server = 'SMTP SERVER ADDRESS'
