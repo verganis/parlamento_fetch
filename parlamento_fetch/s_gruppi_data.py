@@ -1,7 +1,7 @@
 #senatori attivi al tal giorno, non include il nome del gruppo x esteso perche' attualmente
 # da' luogo a risultati ripetuti
 
-from utils.sparql import *
+from utils.sparql_tools import *
 
 day = "2012-03-15"
 

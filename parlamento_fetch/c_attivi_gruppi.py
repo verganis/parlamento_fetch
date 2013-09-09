@@ -1,4 +1,4 @@
-from utils.sparql import *
+from utils.sparql_tools import *
 import sys
 
 # stampa la composizione dei gruppi parlamentari alla data

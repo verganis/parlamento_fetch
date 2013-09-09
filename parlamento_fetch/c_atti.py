@@ -2,7 +2,7 @@
 # il primo contiene gli id dell'atto
 # dopodiche' genera un file per ogni atto con tutti i dettagli relativi allo stesso
 
-from utils.sparql import *
+from utils.sparql_tools import *
 import sys
 
 

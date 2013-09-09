@@ -1,4 +1,6 @@
-from utils.sparql import *
+from utils.sparql_tools import run_query, write_file
+import settings
+
 #estrae tutte le sedute e votazioni di un certo giorno
 # per ogni votazione estrae tutti i singoli voti
 
@@ -25,7 +27,7 @@ ORDER BY ?seduta
 
 
 fields_votazioni = ["votazione","seduta"]
-results_votazioni = run_query(sparql_senato, query_votazioni, fields_votazioni)
+results_votazioni = run_query(settings.sparql_senato, query_votazioni)
 
 # per ogni seduta estrae il numero delle votazioni relative
 for votazioni in results_votazioni:
@@ -57,8 +59,8 @@ for votazioni in results_votazioni:
 
 
     fields_votazione = ["votazione","label","favorevoli","contrari","astenuti","presenti","missione","maggioranza","nlegale","esito","votanti"]
-    results_votazione = run_query(sparql_senato, query_votazione, fields_votazione)
-    write_to_file(output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
+    results_votazione = run_query(settings.sparql_senato, query_votazione)
+    write_file(settings.output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
 
     # TODO: tirare giu tutti i dati rispettivi ai VOTI singoli e metterli in un file
 
@@ -95,7 +97,6 @@ for votazioni in results_votazioni:
     #
     #     print(val + ":" + result_aggregazione)
     #
-
 
 
 
