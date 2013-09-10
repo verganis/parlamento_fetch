@@ -1,6 +1,8 @@
-from utils.sparql_tools import run_query, write_file
+import re
+from utils.sparql_tools import run_query, write_file, send_email
 import glob, os
 from settings_local import *
+import time
 
 
 # controlla le votazioni presenti sul sito del Senato e le confronta con i file gia' salvati
@@ -15,36 +17,99 @@ from settings_local import *
 
 
 
-# cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima importata
-# vedo su sparql qual e' l'ultima seduta presente
+# cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima che
+#  e' stata gia' importata
 
 os.chdir(output_folder)
-for files in glob.glob("S_seduta_" + legislatura_id +"*.csv"):
-    print files
+seduta_file_pattern = senato_prefix + prefix_separator + seduta_prefix + \
+                      prefix_separator + legislatura_id + prefix_separator
+
+n_last_seduta = '0'
+sedute_file = sorted(glob.glob(seduta_file_pattern + "*.csv"), key=os.path.realpath)
+if len(sedute_file)>0:
+    last_seduta_filename = sedute_file[-1]
+
+    seduta_reg_exp=re.compile('^'+seduta_file_pattern+'(.+).csv')
+    n_last_seduta = seduta_reg_exp.match(last_seduta_filename).groups()[0]
 
 
-#
-# query_votazioni = """
-# PREFIX osr: <http://dati.senato.it/osr/>
-# PREFIX ocd: <http://dati.camera.it/ocd/>
-# select ?votazione ?seduta
-# where
-# {
-# ?seduta a osr:SedutaAssemblea.
-# ?seduta osr:dataSeduta ?dataSeduta.
-# ?seduta osr:legislatura ?legislatura.
-#
-# ?votazione a osr:Votazione.
-# ?votazione osr:seduta ?seduta.
-#
-# FILTER(str(?legislatura)="%s")
-#
-# }
-# ORDER BY ?seduta
-# """ % settings.legislatura_id
-#
-#
-# results_votazioni = run_query(settings.sparql_senato, query_votazioni)
+# vedo su sparql se sono presenti sedute successive
+print "query sedute"
+query_sedute = """
+    PREFIX osr: <http://dati.senato.it/osr/>
+    PREFIX ocd: <http://dati.camera.it/ocd/>
+    select ?seduta ?numero
+    where
+    {
+    ?seduta a osr:SedutaAssemblea.
+    ?seduta osr:numeroSeduta ?numero.
+    ?seduta osr:legislatura """ + legislatura_id +"""
+    FILTER( ?numero > """ + n_last_seduta +""")
+    }
+    ORDER BY ?numero
+    """
+results_sedute = run_query(sparql_senato, query_sedute)
+
+if results_sedute != -1:
+    # se sono presenti sedute non importate le importa
+    if len(results_sedute)>0:
+        for seduta in results_sedute:
+            print "query seduta " + seduta['numero']
+            time.sleep(0.01)
+            # query per prendere tutti i dati della singola seduta
+            query_seduta = """
+                PREFIX osr: <http://dati.senato.it/osr/>
+                PREFIX ocd: <http://dati.camera.it/ocd/>
+                select ?seduta ?data ?tipoSeduta ?numero
+                where
+                {
+                ?seduta a osr:SedutaAssemblea.
+                ?seduta osr:legislatura ?legislatura.
+                ?seduta osr:numeroSeduta ?numero.
+                ?seduta osr:dataSeduta ?data.
+                ?seduta osr:tipoSeduta ?tipoSeduta.
+                FILTER( ?numero = """+seduta['numero'] +"""
+                    and ?legislatura = """+legislatura_id +"""
+                    )
+                }
+                """
+
+            results_seduta = run_query(sparql_senato, query_seduta)
+            if results_seduta != -1:
+                # scrive il file seduta
+                write_file(output_folder+
+                           seduta_file_pattern+seduta['numero'],
+                           results_seduta,fields=None,print_metadata=True
+                    )
+
+                #cerca tutte le votazioni per la presente seduta e se ce ne sono le importa
+
+                query_seduta_votazioni = """
+                    PREFIX osr: <http://dati.senato.it/osr/>
+                    PREFIX ocd: <http://dati.camera.it/ocd/>
+                    select ?numero
+                    where
+                    {
+                    ?votazione a osr:Votazione.
+                    ?votazione osr:seduta """+seduta['numero']+""".
+                    ?votazione osr:numeroLegale ?numero.
+                    }
+                    ORDER BY ?numero
+
+                    """
+
+
+
+
+            else:
+                send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
+
+    else:
+        print "nessuna nuova seduta"
+        exit(1)
+else:
+    send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
+
 #
 # # per ogni seduta estrae il numero delle votazioni relative
 # for votazioni in results_votazioni:
@@ -78,42 +143,3 @@ for files in glob.glob("S_seduta_" + legislatura_id +"*.csv"):
 #     fields_votazione = ["votazione","label","favorevoli","contrari","astenuti","presenti","missione","maggioranza","nlegale","esito","votanti"]
 #     results_votazione = run_query(sparql_senato, query_votazione, fields_votazione)
 #     write_file(output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
-
-    # TODO: tirare giu tutti i dati rispettivi ai VOTI singoli e metterli in un file
-
-    # val_aggregazione = ["favorevole", "contrario", "astenuto", "inCongedoMissione"]
-    #
-    # for val in val_aggregazione:
-    #     query_aggregazione = """
-    #     PREFIX osr: <http://dati.senato.it/osr/>
-    #     PREFIX ocd: <http://dati.camera.it/ocd/>
-    #     select COUNT(?%s) as ?%s
-    #     where
-    #     {
-    #     ?votazione a osr:Votazione.
-    #     ?votazione osr:%s ?%s.
-    #     FILTER(str(?votazione)='%s').
-    #     }
-    #     """ % (val, val, val, val, nvotazione)
-    #
-    #     fields_aggregazione = ["s"]
-    #     results_aggregazione = run_query(sparql_senato, query_aggregazione, fields_aggregazione)
-    #     write_to_file(output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
-    #
-    #
-    #     sparql.setQuery(query_aggregazione)
-    #     sparql.setReturnFormat(JSON)
-    #     try:
-    #         results_aggregazione = sparql.query().convert()
-    #     except EndPointNotFound, err:
-    #         print(query_aggregazione)
-    #         error(err)
-    #         sys.exit(1)
-    #
-    #     result_aggregazione = results_aggregazione["results"]["bindings"][0][val]["value"]
-    #
-    #     print(val + ":" + result_aggregazione)
-    #
-
-
-

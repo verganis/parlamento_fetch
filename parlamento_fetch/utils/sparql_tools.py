@@ -1,4 +1,5 @@
 from string import join
+import urllib2
 from SPARQLWrapper import SPARQLWrapper, JSON, XML, RDF
 import csv
 from SPARQLWrapper.SPARQLExceptions import QueryBadFormed, EndPointNotFound
@@ -34,7 +35,11 @@ def run_query(sparql_endpoint, query):
     sparql = SPARQLWrapper(sparql_endpoint)
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
-    results = sparql.query().convert()
+    try:
+        results = sparql.query().convert()
+    except urllib2.HTTPError:
+        return -1
+
     my_results=[]
     if results:
         for r in results["results"]["bindings"]:
@@ -46,7 +51,7 @@ def run_query(sparql_endpoint, query):
             my_results.append(temp)
 
         return my_results
-        # return results["results"]["bindings"]
+
     else:
         return None
 

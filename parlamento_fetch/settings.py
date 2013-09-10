@@ -9,16 +9,24 @@ date_format = '%Y%m%d'
 legislatura_id = '17'
 
 prefix_separator = "_"
+
 senato_prefix = "s"
 camera_prefix = "c"
+
 atti_prefix = "a"
 votazioni_prefix = "v"
+
 incarichi_prefix = "i"
 composizione_prefix = "composizione"
 aggiunte_prefix = "aggiunte"
 rimozioni_prefix = "rimozioni"
 cambi_gruppo_prefix = "cgruppo"
 cariche_prefix = "cariche"
+
+seduta_prefix = "seduta"
+votazione_prefix = "votazione"
+votazioni_prefix = "votazioni"
+
 output_folder = BASE_PATH + "/" + "output/"
 
 notification_list = [
