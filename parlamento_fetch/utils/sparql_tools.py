@@ -8,6 +8,8 @@ import sys
 import difflib
 import smtplib
 from email.mime.text import MIMEText
+import time
+
 
 # indents XML file to achieve prettyprint format
 def indent(elem, level=0):
@@ -31,10 +33,14 @@ else:
     src = sys.stdin
 
 
-def run_query(sparql_endpoint, query):
+def run_query(sparql_endpoint, query, query_delay=0):
     sparql = SPARQLWrapper(sparql_endpoint)
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
+
+    # sleep is needed to preserve sparql connection, otherwise it goes down
+    if query_delay>0:
+        time.sleep(query_delay)
     try:
         results = sparql.query().convert()
     except urllib2.HTTPError:
