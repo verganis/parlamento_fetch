@@ -24,6 +24,10 @@ os.chdir(output_folder)
 seduta_file_pattern = senato_prefix + prefix_separator + seduta_prefix + \
                       prefix_separator + legislatura_id + prefix_separator
 
+votazioni_file_pattern = senato_prefix + prefix_separator + votazioni_prefix + \
+                         prefix_separator + legislatura_id + prefix_separator
+
+
 n_last_seduta = '0'
 sedute_file = sorted(glob.glob(seduta_file_pattern + "*.csv"), key=os.path.realpath)
 if len(sedute_file)>0:
@@ -38,12 +42,12 @@ print "query sedute"
 query_sedute = """
     PREFIX osr: <http://dati.senato.it/osr/>
     PREFIX ocd: <http://dati.camera.it/ocd/>
-    select ?seduta ?numero
+    select ?seduta_id ?numero
     where
     {
-    ?seduta a osr:SedutaAssemblea.
-    ?seduta osr:numeroSeduta ?numero.
-    ?seduta osr:legislatura """ + legislatura_id +"""
+    ?seduta_id a osr:SedutaAssemblea.
+    ?seduta_id osr:numeroSeduta ?numero.
+    ?seduta_id osr:legislatura """ + legislatura_id +"""
     FILTER( ?numero > """ + n_last_seduta +""")
     }
     ORDER BY ?numero
@@ -55,19 +59,21 @@ if results_sedute != -1:
     if len(results_sedute)>0:
         for seduta in results_sedute:
             print "query seduta " + seduta['numero']
-            time.sleep(0.01)
+
+            # sleep is needed to preserve Senato sparql connection, otherwise it goes down
+            time.sleep(query_delay)
             # query per prendere tutti i dati della singola seduta
             query_seduta = """
                 PREFIX osr: <http://dati.senato.it/osr/>
                 PREFIX ocd: <http://dati.camera.it/ocd/>
-                select ?seduta ?data ?tipoSeduta ?numero
+                select ?seduta_id ?data ?tipoSeduta ?numero
                 where
                 {
-                ?seduta a osr:SedutaAssemblea.
-                ?seduta osr:legislatura ?legislatura.
-                ?seduta osr:numeroSeduta ?numero.
-                ?seduta osr:dataSeduta ?data.
-                ?seduta osr:tipoSeduta ?tipoSeduta.
+                ?seduta_id a osr:SedutaAssemblea.
+                ?seduta_id osr:legislatura ?legislatura.
+                ?seduta_id osr:numeroSeduta ?numero.
+                ?seduta_id osr:dataSeduta ?data.
+                ?seduta_id osr:tipoSeduta ?tipoSeduta.
                 FILTER( ?numero = """+seduta['numero'] +"""
                     and ?legislatura = """+legislatura_id +"""
                     )
@@ -78,7 +84,7 @@ if results_sedute != -1:
             if results_seduta != -1:
                 # scrive il file seduta
                 write_file(output_folder+
-                           seduta_file_pattern+seduta['numero'],
+                           seduta_file_pattern+seduta['numero']+".csv",
                            results_seduta,fields=None,print_metadata=True
                     )
 
@@ -87,16 +93,23 @@ if results_sedute != -1:
                 query_seduta_votazioni = """
                     PREFIX osr: <http://dati.senato.it/osr/>
                     PREFIX ocd: <http://dati.camera.it/ocd/>
-                    select ?numero
+                    select ?votazione ?numero
                     where
                     {
                     ?votazione a osr:Votazione.
-                    ?votazione osr:seduta """+seduta['numero']+""".
-                    ?votazione osr:numeroLegale ?numero.
+                    ?votazione osr:numero ?numero.
+                    ?votazione osr:seduta ?seduta.
+                    filter( str(?seduta) = str(\""""+seduta['seduta_id']+"""\"))
                     }
                     ORDER BY ?numero
-
                     """
+
+                results_votazioni = run_query(sparql_senato, query_seduta_votazioni)
+                # scrive il file votazioni
+                write_file(output_folder+
+                           votazioni_file_pattern+seduta['numero']+".csv",
+                           results_votazioni,fields=None,print_metadata=True
+                )
 
 
 

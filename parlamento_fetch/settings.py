@@ -27,6 +27,8 @@ seduta_prefix = "seduta"
 votazione_prefix = "votazione"
 votazioni_prefix = "votazioni"
 
+query_delay = 0.01
+
 output_folder = BASE_PATH + "/" + "output/"
 
 notification_list = [

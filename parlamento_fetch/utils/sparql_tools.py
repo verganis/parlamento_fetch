@@ -58,9 +58,10 @@ def run_query(sparql_endpoint, query):
 
 def write_file(filename, results,fields=None,print_metadata=True):
 
+
+    # output su file
+    outputfile = open(filename,'w')
     if results:
-        # output su file
-        outputfile = open(filename,'w')
         if not fields:
             fields= results[0].keys()
 
@@ -81,7 +82,7 @@ def write_file(filename, results,fields=None,print_metadata=True):
                 outputfile.write(',')
             outputfile.write("\n")
 
-        outputfile.close()
+    outputfile.close()
 
 
 def create_diff(filename1, filename2):
