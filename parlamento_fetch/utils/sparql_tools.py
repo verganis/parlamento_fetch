@@ -51,6 +51,8 @@ def run_query(sparql_endpoint, query, query_delay=0, Json=False):
         # riorganizza la struttura dati
         pretty_result={}
         for row in results['results']['bindings']:
+            pprint.pprint(row)
+            pprint.pprint(row.keys())
             if row['field']['value'] not in pretty_result.keys():
 
                 pretty_result[row['field']['value']]=[]

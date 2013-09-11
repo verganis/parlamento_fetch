@@ -60,13 +60,16 @@ if results_sedute != -1:
     # se sono presenti sedute non importate le importa
     if len(results_sedute)>0:
         for seduta in results_sedute:
+            # total result will be the comprehensive collection of data about a seduta and
+            # all its votazioni
+            total_result = {}
             print "query seduta " + seduta['numero']
 
             # query per prendere tutti i dati della singola seduta
             query_seduta = """
                 PREFIX osr: <http://dati.senato.it/osr/>
                 PREFIX ocd: <http://dati.camera.it/ocd/>
-                select ?seduta_id ?data ?tipoSeduta ?numero
+                select ?data ?tipoSeduta ?numero
                 where
                 {
                 ?seduta_id a osr:SedutaAssemblea.
@@ -80,15 +83,18 @@ if results_sedute != -1:
                 }
                 """
 
-            results_seduta = run_query(sparql_senato, query_seduta,query_delay)
+            results_seduta = run_query(sparql_senato, query_seduta,query_delay, Json=False)
             if results_seduta != -1:
                 # scrive il file seduta
-                write_file(output_folder+
-                           seduta_file_pattern+seduta['numero']+".csv",
-                           results_seduta,
-                           fields=['seduta_id','data','tipoSeduta','numero'],
-                           print_metadata=True
-                    )
+                # write_file(output_folder+
+                #            seduta_file_pattern+seduta['numero']+".csv",
+                #            results_seduta,
+                #            fields=['seduta_id','data','tipoSeduta','numero'],
+                #            print_metadata=True
+                #     )
+
+                # aggiunge i metadati della seduta al dizionario totale
+                total_result['metadata'] = results_seduta
 
                 #cerca tutte le votazioni per la presente seduta e se ce ne sono le importa
 
@@ -108,13 +114,14 @@ if results_sedute != -1:
 
                 results_votazioni = run_query(sparql_senato, query_seduta_votazioni,query_delay)
                 if results_votazioni!=-1:
+                    total_result['votazioni']={}
                     # scrive il file votazioni
-                    write_file(output_folder+
-                               votazioni_file_pattern+seduta['numero']+".csv",
-                               results_votazioni,
-                               fields=['votazione','numero'],
-                               print_metadata=True
-                        )
+                    # write_file(output_folder+
+                    #            votazioni_file_pattern+seduta['numero']+".csv",
+                    #            results_votazioni,
+                    #            fields=['votazione','numero'],
+                    #            print_metadata=True
+                    #     )
 
                     for votazione in results_votazioni:
                         print "query sed:" +seduta['numero']+", votazione:"+votazione['votazione']
@@ -133,15 +140,16 @@ if results_sedute != -1:
                         results_votazione = run_query(sparql_senato, query_votazione,query_delay,Json=True)
 
                         if results_votazione!=-1:
-                            write_file(output_folder+
-                                       votazione_file_pattern+
-                                       seduta['numero']+prefix_separator+
-                                       votazione['numero']+".json",
-                                       results_votazione,
-                                       fields=None,
-                                       print_metadata=False,
-                                       Json=True
-                            )
+                            total_result['votazioni'][votazione['votazione']] = results_votazione
+                            # write_file(output_folder+
+                            #            votazione_file_pattern+
+                            #            seduta['numero']+prefix_separator+
+                            #            votazione['numero']+".json",
+                            #            results_votazione,
+                            #            fields=None,
+                            #            print_metadata=False,
+                            #            Json=True
+                            # )
 
 
                         else:
@@ -150,7 +158,14 @@ if results_sedute != -1:
 
                     else:
                         send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
-
+                write_file(output_folder+
+                           votazione_file_pattern+
+                           seduta['numero']+".json",
+                           total_result,
+                           fields=None,
+                           print_metadata=False,
+                           Json=True
+                )
 
             else:
                 send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
