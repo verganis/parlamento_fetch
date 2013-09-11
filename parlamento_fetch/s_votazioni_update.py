@@ -1,8 +1,10 @@
+import json
+import pprint
 import re
 from utils.sparql_tools import run_query, write_file, send_email
 import glob, os
 from settings_local import *
-
+import logging
 
 # controlla le votazioni presenti sul sito del Senato e le confronta con i file gia' salvati
 # nell'apposita cartella dati. se sono presenti nuove votazioni genera tre tipi di file:
@@ -13,8 +15,6 @@ from settings_local import *
 # * file con tutti i dati relativi alla seduta, se non e' gia presente
 #  - seduta_LEGISLATURA_NUMEROSEDUTA.csv
 #  nel caso in cui non si riesca a connettere allo sparql endpoint manda una mail alla lista di admin
-
-
 
 # cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima che
 #  e' stata gia' importata
@@ -121,7 +121,7 @@ if results_sedute != -1:
                         query_votazione = """
                             PREFIX osr: <http://dati.senato.it/osr/>
                             PREFIX ocd: <http://dati.camera.it/ocd/>
-                            select ?votazione ?field ?value
+                            select ?field ?value
                             where
                             {
                             ?votazione a osr:Votazione.
@@ -130,17 +130,19 @@ if results_sedute != -1:
                             }
                             ORDER BY ?field
                             """
-                        results_votazione = run_query(sparql_senato, query_votazione,query_delay)
+                        results_votazione = run_query(sparql_senato, query_votazione,query_delay,Json=True)
+
                         if results_votazione!=-1:
-                            # scrive il file votazioni
                             write_file(output_folder+
                                        votazione_file_pattern+
                                        seduta['numero']+prefix_separator+
-                                       votazione['numero']+".csv",
+                                       votazione['numero']+".json",
                                        results_votazione,
-                                       fields=['votazione','field','value'],
-                                       print_metadata=True
+                                       fields=None,
+                                       print_metadata=False,
+                                       Json=True
                             )
+
 
                         else:
                             send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
@@ -158,37 +160,3 @@ if results_sedute != -1:
         exit(1)
 else:
     send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
-
-#
-# # per ogni seduta estrae il numero delle votazioni relative
-# for votazioni in results_votazioni:
-#
-#     nvotazione = votazioni["votazione"]
-#
-#
-#     query_votazione = """
-#     PREFIX osr: <http://dati.senato.it/osr/>
-#     PREFIX ocd: <http://dati.camera.it/ocd/>
-#     select distinct ?votazione ?label ?favorevoli ?contrari ?astenuti ?presenti ?missione ?maggioranza ?nlegale ?esito ?votanti
-#     where
-#     {
-#     ?votazione a osr:Votazione.
-#     ?votazione osr:favorevoli ?favorevoli.
-#     ?votazione osr:contrari ?contrari.
-#     ?votazione osr:astenuti ?astenuti.
-#     ?votazione osr:inCongedoMissione ?missione.
-#     ?votazione osr:presenti ?presenti.
-#     ?votazione osr:votanti ?votanti.
-#     ?votazione osr:maggioranza ?maggioranza.
-#     ?votazione osr:numeroLegale ?nlegale.
-#     ?votazione osr:esito ?esito.
-#     ?votazione rdfs:label ?label.
-#     FILTER(str(?votazione)='%s')
-#     }
-#
-#     """ % nvotazione
-#
-#
-#     fields_votazione = ["votazione","label","favorevoli","contrari","astenuti","presenti","missione","maggioranza","nlegale","esito","votanti"]
-#     results_votazione = run_query(sparql_senato, query_votazione, fields_votazione)
-#     write_file(output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)

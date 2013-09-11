@@ -43,3 +43,14 @@ notification_system = {
 smtp_server = 'SMTP SERVER ADDRESS'
 
 no_difference_msg = "Nessuna differenza rilevata"
+
+LOGGING = {
+
+    'loggers': {
+        'script': {
+            'handlers': ['console', 'logfile'],
+            'level': 'DEBUG',
+            'propagate': True,
+            }
+    }
+}

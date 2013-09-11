@@ -1,3 +1,5 @@
+import json
+import pprint
 from string import join
 import urllib2
 from SPARQLWrapper import SPARQLWrapper, JSON, XML, RDF
@@ -33,7 +35,7 @@ else:
     src = sys.stdin
 
 
-def run_query(sparql_endpoint, query, query_delay=0):
+def run_query(sparql_endpoint, query, query_delay=0, Json=False):
     sparql = SPARQLWrapper(sparql_endpoint)
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
@@ -45,6 +47,16 @@ def run_query(sparql_endpoint, query, query_delay=0):
         results = sparql.query().convert()
     except urllib2.HTTPError:
         return -1
+    if Json is True:
+        # riorganizza la struttura dati
+        pretty_result={}
+        for row in results['results']['bindings']:
+            if row['field']['value'] not in pretty_result.keys():
+
+                pretty_result[row['field']['value']]=[]
+            pretty_result[row['field']['value']].append(row['value']['value'])
+
+        return pretty_result
 
     my_results=[]
     if results:
@@ -62,31 +74,34 @@ def run_query(sparql_endpoint, query, query_delay=0):
         return None
 
 
-def write_file(filename, results,fields=None,print_metadata=True):
-
+def write_file(filename, results,fields=None,print_metadata=True,Json=False):
 
     # output su file
     outputfile = open(filename,'w')
-    if results:
-        if not fields:
-            fields= results[0].keys()
 
-        #stampa i metadati
-        if print_metadata:
-            for index, variable in enumerate(fields):
-                outputfile.write('"%s"' % variable)
-                if index < len(fields):
-                    outputfile.write(",")
+    if Json is True:
+        outputfile.write("%s" % json.dumps(results, indent=0, sort_keys=True))
+    else:
+        if results:
+            if not fields:
+                fields= results[0].keys()
 
-            outputfile.write("\n")
+            #stampa i metadati
+            if print_metadata:
+                for index, variable in enumerate(fields):
+                    outputfile.write('"%s"' % variable)
+                    if index < len(fields):
+                        outputfile.write(",")
 
-        #stampa i valori
-        for r in results:
-            for field in fields:
-                if field in r.keys():
-                    outputfile.write('"%s"' % unicode(r[field]).encode("utf-8"))
-                outputfile.write(',')
-            outputfile.write("\n")
+                outputfile.write("\n")
+
+            #stampa i valori
+            for r in results:
+                for field in fields:
+                    if field in r.keys():
+                        outputfile.write('"%s"' % unicode(r[field]).encode("utf-8"))
+                    outputfile.write(',')
+                outputfile.write("\n")
 
     outputfile.close()
 
