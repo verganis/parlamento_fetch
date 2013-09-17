@@ -3,6 +3,9 @@ import os.path
 
 BASE_PATH = os.path.dirname(__file__)
 
+script_name = "Open data Senato Update"
+osr_prefix = "http://dati.senato.it/osr/"
+
 sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
 date_format = '%Y%m%d'
