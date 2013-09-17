@@ -127,21 +127,58 @@ if results_sedute != -1:
                             """
                         results_votazione = run_query(sparql_senato, query_votazione,query_delay,Json=True)
 
+                        print "tipo votazione: "+results_votazione[osr_prefix+'tipoVotazione'][0]
+
                         if results_votazione!=-1:
                             total_result['votazioni'][votazione['votazione']] = results_votazione
 
                             #     controlla la correttezza dei dati della votazione
                             check_campi = []
-                            for k, campi in campi_controllo_somme:
-                                if osr_prefix+campi[0] in results_votazione.keys() and osr_prefix+campi[1] in results_votazione.keys():
-                                    if len(results_votazione[osr_prefix+campi[0]]) == int(results_votazione[osr_prefix+campi[1]][0]):
-                                        print campi[0] + " ok"
-                                        check_campi[k] = True
+
+                            # se la votazione non e' segreta
+                            if results_votazione[osr_prefix+'tipoVotazione'][0] != 'segreta':
+
+                                # per ogni campo da controllare controlla che esista il totale numerico.
+                                # se il totale e' maggiore di 0 allora deve esistere anche la lista con gli id riferiti al campo
+                                # se la lista esiste allora il numero di id deve essere = al totale numerico
+                                for (k, campi) in enumerate(campi_controllo_somme):
+                                    if osr_prefix+campi[1] in results_votazione.keys():
+                                        if int(results_votazione[osr_prefix+campi[1]][0])>0:
+                                            if osr_prefix+campi[0] in results_votazione.keys():
+                                                if len(results_votazione[osr_prefix+campi[0]]) == \
+                                                        int(results_votazione[osr_prefix+campi[1]][0]):
+                                                    campo_validation=True
+                                                else:
+                                                    campo_validation=False
+
+                                            else:
+                                                campo_validation=False
+
+                                        else:
+                                            if int(results_votazione[osr_prefix+campi[1]][0])==0:
+                                                campo_validation=True
+                                            else:
+                                                campo_validation=False
                                     else:
-                                        print campi[1] + " ko: %s != %s" % (len(results_votazione[osr_prefix+campi[0]]), results_votazione[osr_prefix+campi[1]][0])
-                                        check_campi[k] = False
-                                else:
-                                    check_campi[k] = False
+                                        campo_validation=False
+
+                                    check_campi.append(campo_validation)
+                                    if campo_validation == False:
+                                        print campi[0]+" : "+str(campo_validation)
+
+                            else:
+                                # se la votazione e' segreta controlla che ci siano i totali numerici dei campi indicati
+                                for (k, campi) in enumerate(campi_controllo_somme):
+                                    if osr_prefix+campi[1] not in results_votazione.keys():
+                                        campo_validation=False
+                                    else:
+                                        campo_validation= True
+
+                                    check_campi.append(campo_validation)
+                                    if campo_validation == False:
+                                        print campi[0]+" : "+str(campo_validation)
+
+
 
                             #
 
