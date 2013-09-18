@@ -163,7 +163,7 @@ if results_sedute != -1:
                                         campo_validation=False
 
                                     check_campi.append(campo_validation)
-                                    if campo_validation == False:
+                                    if not campo_validation:
                                         print campi[0]+" : "+str(campo_validation)
 
                             else:
@@ -175,12 +175,37 @@ if results_sedute != -1:
                                         campo_validation= True
 
                                     check_campi.append(campo_validation)
-                                    if campo_validation == False:
+                                    if not campo_validation:
                                         print campi[0]+" : "+str(campo_validation)
 
+                            # effettua controlli sulle somme
+                            # votanti= favorevoli + contrari + astenuti
+                            somma_votanti = int(results_votazione[osr_prefix+"favorevoli"][0]) +\
+                                int(results_votazione[osr_prefix+"contrari"][0])+ \
+                                int(results_votazione[osr_prefix+"astenuti"][0])
+                            if int(results_votazione[osr_prefix+"votanti"][0]) != somma_votanti:
+                                print "Somma votanti non corretta: %s != %s" % (somma_votanti, results_votazione[osr_prefix+"votanti"][0])
+                            else:
+                                print "Somma votanti corretta: %s = %s" % (somma_votanti, results_votazione[osr_prefix+"votanti"][0])
+
+                            # presenti = votanti + presidente +  richiedenteNonVotante
+                            somma_presenti = int(results_votazione[osr_prefix+"votanti"][0])
+                            if osr_prefix+"presidente" in results_votazione.keys():
+                                somma_presenti += 1
+                                print "Presidente Presente"
+                            else:
+                                print "Presidente non Presente "
+
+                            if osr_prefix+"richiedenteNonVotante" in results_votazione.keys():
+                                somma_presenti += len(results_votazione[osr_prefix+"richiedenteNonVotante"])
+                            if int(results_votazione[osr_prefix+"presenti"][0]) != somma_presenti:
+                                print "Somma presenti non corretta: %s != %s" % (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
+                            else:
+                                print "Somma presenti corretta: %s = %s" % (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
 
 
-                            #
+
+                                #
 
 
                         else:
