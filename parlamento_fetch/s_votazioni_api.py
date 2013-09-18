@@ -14,7 +14,7 @@ import logging
 
 
 error_messages={
-    'connection_fail':'http error: Connection refused',
+    'connection_fail':'http error: Connection refused for the query: %s',
     'somma_votanti': "Somma votanti non corretta: %s != %s",
     'somma_presenti': "Somma presenti non corretta: %s != %s"
 }
@@ -42,7 +42,7 @@ votazioni_file_pattern = senato_prefix + prefix_separator + votazioni_prefix + \
 votazione_file_pattern = senato_prefix + prefix_separator + votazione_prefix + \
                          prefix_separator + legislatura_id + prefix_separator
 
-n_last_seduta = '0'
+n_last_seduta = '100'
 # TODO: legge le api di Open parlamento per vedere qual e' l'ultima seduta importata
 
 
@@ -214,12 +214,12 @@ if results_sedute != -1:
 
                         else:
                             error_type = "connection_fail"
-                            error_mail_body['connection'].append(error_messages[error_type])
+                            error_mail_body['connection'].append(error_messages[error_type]%query_votazione)
 
 
-                    else:
-                        error_type = "connection_fail"
-                        error_mail_body['connection'].append(error_messages[error_type])
+                else:
+                    error_type = "connection_fail"
+                    error_mail_body['connection'].append(error_messages[error_type]%query_seduta_votazioni)
 
                 write_file(output_folder+
                            seduta_file_pattern+
@@ -232,14 +232,14 @@ if results_sedute != -1:
 
             else:
                 error_type = "connection_fail"
-                error_mail_body['connection'].append(error_messages[error_type])
+                error_mail_body['connection'].append(error_messages[error_type]%query_seduta)
 
     else:
         print "nessuna nuova seduta"
         exit(1)
 else:
     error_type = "connection_fail"
-    error_mail_body.append['connection'](error_messages[error_type])
+    error_mail_body.append['connection'](error_messages[error_type]%query_sedute)
 
 
 # se c'e' stato qualche errore manda la mail agli amministratori di sistema
@@ -259,6 +259,8 @@ if error_c>0:
     send_email(smtp_server,
                notification_system,
                notification_list,
-               subject= script_name + " - " + error_c +" errori",
+               subject= script_name + " - " + str(error_c) +" errori",
                content= content_str
     )
+else:
+    print "no errors"

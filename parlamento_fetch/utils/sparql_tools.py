@@ -137,5 +137,6 @@ def send_email(smtp_server, notification_system, address_list, subject, content)
     # Send the message via our own SMTP server, but don't include the
     # envelope header.
     s = smtplib.SMTP(smtp_server)
-    s.sendmail(notification_system['name'], [address_list], msg.as_string())
+    err = s.sendmail(notification_system['name'], address_list, msg.as_string())
     s.quit()
+    return err
