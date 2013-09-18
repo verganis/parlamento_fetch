@@ -14,8 +14,13 @@ import logging
 
 
 error_messages={
-    'connection_fail':'http error: Connection refused'
+    'connection_fail':'http error: Connection refused',
+    'somma_votanti': "Somma votanti non corretta: %s != %s",
+    'somma_presenti': "Somma presenti non corretta: %s != %s"
 }
+
+
+error_mail_body= {'connection': []}
 
 campi_controllo_somme=[
     # lista di id,totale
@@ -37,7 +42,7 @@ votazioni_file_pattern = senato_prefix + prefix_separator + votazioni_prefix + \
 votazione_file_pattern = senato_prefix + prefix_separator + votazione_prefix + \
                          prefix_separator + legislatura_id + prefix_separator
 
-n_last_seduta = '7'
+n_last_seduta = '0'
 # TODO: legge le api di Open parlamento per vedere qual e' l'ultima seduta importata
 
 
@@ -112,6 +117,9 @@ if results_sedute != -1:
                     total_result['votazioni']={}
 
                     for votazione in results_votazioni:
+
+                        error_mail_body[votazione['votazione']]=[]
+
                         print "query sed:" +seduta['numero']+", votazione:"+votazione['votazione']
                         query_votazione = """
                             PREFIX osr: <http://dati.senato.it/osr/>
@@ -185,47 +193,34 @@ if results_sedute != -1:
                                 int(results_votazione[osr_prefix+"astenuti"][0])
                             if int(results_votazione[osr_prefix+"votanti"][0]) != somma_votanti:
                                 print "Somma votanti non corretta: %s != %s" % (somma_votanti, results_votazione[osr_prefix+"votanti"][0])
-                            else:
-                                print "Somma votanti corretta: %s = %s" % (somma_votanti, results_votazione[osr_prefix+"votanti"][0])
+                                error_type = "somma_votanti"
+                                error_mail_body[votazione['votazione']].append(error_messages[error_type]% (somma_votanti, results_votazione[osr_prefix+"votanti"][0]))
+
 
                             # presenti = votanti + presidente +  richiedenteNonVotante
                             somma_presenti = int(results_votazione[osr_prefix+"votanti"][0])
                             if osr_prefix+"presidente" in results_votazione.keys():
                                 somma_presenti += 1
-                                print "Presidente Presente"
-                            else:
-                                print "Presidente non Presente "
 
                             if osr_prefix+"richiedenteNonVotante" in results_votazione.keys():
                                 somma_presenti += len(results_votazione[osr_prefix+"richiedenteNonVotante"])
                             if int(results_votazione[osr_prefix+"presenti"][0]) != somma_presenti:
                                 print "Somma presenti non corretta: %s != %s" % (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
-                            else:
-                                print "Somma presenti corretta: %s = %s" % (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
+                                error_type = "somma_presenti"
+                                error_mail_body[votazione['votazione']].append(error_messages[error_type]% (somma_presenti, results_votazione[osr_prefix+"presenti"][0]))
 
-
-
-                                #
+                            #
 
 
                         else:
                             error_type = "connection_fail"
-                            send_email(smtp_server,
-                                       notification_system,
-                                       notification_list,
-                                       subject= script_name + " - " +error_type,
-                                       content= error_messages[error_type]
-                            )
+                            error_mail_body['connection'].append(error_messages[error_type])
 
 
                     else:
                         error_type = "connection_fail"
-                        send_email(smtp_server,
-                                   notification_system,
-                                   notification_list,
-                                   subject= script_name + " - " +error_type,
-                                   content= error_messages[error_type]
-                        )
+                        error_mail_body['connection'].append(error_messages[error_type])
+
                 write_file(output_folder+
                            seduta_file_pattern+
                            seduta['numero']+".json",
@@ -237,21 +232,33 @@ if results_sedute != -1:
 
             else:
                 error_type = "connection_fail"
-                send_email(smtp_server,
-                           notification_system,
-                           notification_list,
-                           subject= script_name + " - " +error_type,
-                           content= error_messages[error_type]
-                )
+                error_mail_body['connection'].append(error_messages[error_type])
 
     else:
         print "nessuna nuova seduta"
         exit(1)
 else:
     error_type = "connection_fail"
+    error_mail_body.append['connection'](error_messages[error_type])
+
+
+# se c'e' stato qualche errore manda la mail agli amministratori di sistema
+
+error_keys = error_mail_body.keys()
+content_str =""
+error_c = 0
+for error_key in error_keys:
+    # serializza i msg di errori
+    if len(error_mail_body[error_key])>0:
+        for msg in error_mail_body[error_key]:
+            content_str+=error_key+" : "+msg+"\n"
+            error_c+=1
+
+
+if error_c>0:
     send_email(smtp_server,
                notification_system,
                notification_list,
-               subject= script_name + " - " +error_type,
-               content= error_messages[error_type]
+               subject= script_name + " - " + error_c +" errori",
+               content= content_str
     )
