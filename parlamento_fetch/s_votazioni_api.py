@@ -5,6 +5,7 @@ from utils.sparql_tools import run_query, write_file, send_email
 import glob, os
 from settings_local import *
 import logging
+import requests
 
 # controlla le votazioni presenti sul sito del Senato e le confronta con quelle
 # gia' importate tramite le API di Open Parlamento
@@ -42,8 +43,17 @@ votazioni_file_pattern = senato_prefix + prefix_separator + votazioni_prefix + \
 votazione_file_pattern = senato_prefix + prefix_separator + votazione_prefix + \
                          prefix_separator + legislatura_id + prefix_separator
 
-n_last_seduta = '100'
+
 # TODO: legge le api di Open parlamento per vedere qual e' l'ultima seduta importata
+n_last_seduta = '0'
+
+parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" +\
+                        parlamento_api_sedute_prefix +"/"+\
+                        "?ordering=-numero&format=json"
+print parlamento_api_sedute
+r = requests.get(parlamento_api_sedute)
+pprint.pprint( r)
+
 
 
 # vedo su sparql se sono presenti sedute successive
