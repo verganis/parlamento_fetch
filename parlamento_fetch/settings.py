@@ -5,6 +5,7 @@ BASE_PATH = os.path.dirname(__file__)
 
 script_name = "Open data Senato Update"
 osr_prefix = "http://dati.senato.it/osr/"
+senatore_prefix = "http://dati.senato.it/senatore/"
 
 sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
@@ -15,6 +16,7 @@ parlamento_api_host = "http://192.168.1.7:8002/"
 parlamento_api_url = "parlamento"
 parlamento_api_leg_prefix = "legislatura-XVII"
 parlamento_api_sedute_prefix = "sedute"
+parlamento_api_parlamentari_prefix = "parlamentari"
 
 prefix_separator = "_"
 

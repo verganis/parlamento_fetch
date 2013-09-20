@@ -44,17 +44,19 @@ votazione_file_pattern = senato_prefix + prefix_separator + votazione_prefix + \
                          prefix_separator + legislatura_id + prefix_separator
 
 
-# TODO: legge le api di Open parlamento per vedere qual e' l'ultima seduta importata
-n_last_seduta = '0'
+# legge le api di Open parlamento per vedere qual e' l'ultima seduta importata correttamente
+
+n_last_seduta = 0
+seduta_day = ""
 
 parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" +\
                         parlamento_api_sedute_prefix +"/"+\
-                        "?ordering=-numero&format=json"
-print parlamento_api_sedute
-r = requests.get(parlamento_api_sedute)
-pprint.pprint( r)
+                        "?ramo=S&ordering=-numero&page_size=500&format=json"
 
 
+r_incarica_list = requests.get(parlamento_api_sedute)
+r_incarica_json = r_incarica_list.json()
+n_last_seduta = r_incarica_json['results'][0]['numero']
 
 # vedo su sparql se sono presenti sedute successive
 print "query sedute"
@@ -67,7 +69,7 @@ query_sedute = """
     ?seduta_id a osr:SedutaAssemblea.
     ?seduta_id osr:numeroSeduta ?numero.
     ?seduta_id osr:legislatura """ + legislatura_id +"""
-    FILTER( ?numero > """ + n_last_seduta +""")
+    FILTER( ?numero > """ +str(n_last_seduta) +""")
     }
     ORDER BY ?numero
     """
@@ -105,6 +107,16 @@ if results_sedute != -1:
 
                 # aggiunge i metadati della seduta al dizionario totale
                 total_result['metadata'] = results_seduta
+                # prende il giorno della seduta per verificare i senatori in carica quel giorno
+                # il booleano seduta_new_day evita di rifare piu' volte la query sui sen.in carica quando stiamo
+                # trattando sedute diverse avvenute nello stesso giorno
+                seduta_new_day = False
+                if seduta_day != results_seduta[0]['data']:
+                    seduta_new_day = True
+                    seduta_day = results_seduta[0]['data']
+
+
+
 
                 #cerca tutte le votazioni per la presente seduta e se ce ne sono le importa
 
@@ -219,7 +231,52 @@ if results_sedute != -1:
                                 error_type = "somma_presenti"
                                 error_mail_body[votazione['votazione']].append(error_messages[error_type]% (somma_presenti, results_votazione[osr_prefix+"presenti"][0]))
 
-                            #
+
+                            #  effettua i controlli sulla votazione basati sui senatori in carica quel giorno
+
+                            #  TODO: controlla che le somme presenti + congedo missione + assenti siano = al n. totale di s. in carica
+
+                            # controlla che tutti i senatori in astenuto, congedo missione, contrario,
+                            # favorevole, richiedente non votante, e presidente siano in carica quel giorno
+                            totale_senatori_seduta = results_votazione[osr_prefix+'votante']
+                            if osr_prefix+"inCongedoMissione" in results_votazione.keys():
+                                totale_senatori_seduta.extend(results_votazione[osr_prefix+'inCongedoMissione'])
+                            if osr_prefix+"richiedenteNonVotante" in results_votazione.keys():
+                                totale_senatori_seduta.extend(results_votazione[osr_prefix+'richiedenteNonVotante'])
+                            totale_senatori_seduta.extend(results_votazione[osr_prefix+'presidente'])
+
+
+                            # prende la lista completa di senatori in carica quel giorno dalle Api
+                            if seduta_new_day is True:
+                                parlamento_api_incarica = parlamento_api_host  +parlamento_api_url +"/" + \
+                                                          parlamento_api_leg_prefix + "/" + \
+                                                          parlamento_api_parlamentari_prefix+"/"+ \
+                                                        "?ramo=S&data="+seduta_day+"&page_size=500&format=json"
+
+                                print "parlamento_api_incarica:"+parlamento_api_incarica
+
+                                r_incarica_list = requests.get(parlamento_api_incarica)
+                                r_incarica_json = r_incarica_list.json()
+                                totale_senatori_api = r_incarica_json['results']
+
+
+                            for senatore in totale_senatori_seduta:
+                                trovato = False
+                                senatore_noprefix = senatore.replace(senatore_prefix,"")
+                                for senatore_api in totale_senatori_api:
+
+                                    if senatore_noprefix == str(senatore_api['carica']['parliament_id']):
+                                        trovato = True
+
+
+                                if not trovato:
+                                    # print u"senatore nome:"+senatore_api['anagrafica']['nome']+ \
+                                    #       +senatore_api['anagrafica']['cognome']+ \
+                                    #       u" id:" +senatore+ u" non trovato in Senatori in Carica"
+
+                                    # TODO: aggingere questo caso al log di errore
+                                    print u" id:" +senatore_noprefix+ u" non trovato in Senatori in Carica"
+
 
 
                         else:
@@ -246,7 +303,7 @@ if results_sedute != -1:
 
     else:
         print "nessuna nuova seduta"
-        exit(1)
+
 else:
     error_type = "connection_fail"
     error_mail_body.append['connection'](error_messages[error_type]%query_sedute)
