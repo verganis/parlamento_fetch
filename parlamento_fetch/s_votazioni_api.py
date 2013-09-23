@@ -17,7 +17,11 @@ import requests
 error_messages={
     'connection_fail':'http error: Connection refused for the query: %s',
     'somma_votanti': "Somma votanti non corretta: %s != %s",
-    'somma_presenti': "Somma presenti non corretta: %s != %s"
+    'somma_presenti': "Somma presenti non corretta: %s != %s",
+    'senatori_incarica': "N. Senatori in carica non coincide: %s != %s",
+    'id_mismatch_sparql': "id: %s presente nelle api ma non nello Sparql end-point",
+    'id_mismatch_api': "id: %s presente nelle Sparql end-point ma non nelle api",
+
 }
 
 
@@ -233,17 +237,51 @@ if results_sedute != -1:
 
 
                             #  effettua i controlli sulla votazione basati sui senatori in carica quel giorno
+                            # da notare che la data di fine Mandato puo' anche non esserci se il sen.
+                            # e' attualmente in carica
 
-                            #  TODO: controlla che le somme presenti + congedo missione + assenti siano = al n. totale di s. in carica
+                            # prende la lista completa di senatori in carica quel giorno dallo sparql endpoint
+                            if seduta_new_day is True:
+
+                                query_incarica = """
+
+                                    PREFIX osr: <http://dati.senato.it/osr/>
+                                    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                                    PREFIX ocd:<http://dati.camera.it/ocd/>
+
+                                    SELECT DISTINCT
+                                    ?senatore ?nome ?cognome
+                                    ?inizioMandato ?fineMandato
+                                    ?tipoMandato
+
+                                    WHERE {
+                                    ?senatore a osr:Senatore.
+                                    ?senatore foaf:firstName ?nome.
+                                    ?senatore foaf:lastName ?cognome.
+                                    ?senatore osr:mandato ?mandato.
+                                    ?mandato osr:legislatura ?legislaturaMandato.
+                                    ?mandato osr:inizio ?inizioMandato.
+                                    ?mandato osr:tipoMandato ?tipoMandato.
+                                    OPTIONAL { ?mandato osr:fine ?fineMandato. }
+
+                                    FILTER(str(?legislaturaMandato)='%s')
+                                    FILTER(?inizioMandato <= "%s"^^xsd:date )
+                                    FILTER(!bound(?fineMandato) || ?fineMandato > "%s"^^xsd:date )
+
+
+                                    } ORDER BY ?cognome ?nome
+                                    """ % ( legislatura_id, seduta_day, seduta_day)
+
+                                senatori_incarica_sparql = run_query(sparql_senato, query_incarica,query_delay)
+
+
 
                             # controlla che tutti i senatori in astenuto, congedo missione, contrario,
                             # favorevole, richiedente non votante, e presidente siano in carica quel giorno
-                            totale_senatori_seduta = results_votazione[osr_prefix+'votante']
+                            senatori_seduta_sparql = results_votazione[osr_prefix+'presente']
                             if osr_prefix+"inCongedoMissione" in results_votazione.keys():
-                                totale_senatori_seduta.extend(results_votazione[osr_prefix+'inCongedoMissione'])
-                            if osr_prefix+"richiedenteNonVotante" in results_votazione.keys():
-                                totale_senatori_seduta.extend(results_votazione[osr_prefix+'richiedenteNonVotante'])
-                            totale_senatori_seduta.extend(results_votazione[osr_prefix+'presidente'])
+                                senatori_seduta_sparql.extend(results_votazione[osr_prefix+'inCongedoMissione'])
+                            senatori_seduta_sparql.extend(results_votazione[osr_prefix+'presidente'])
 
 
                             # prende la lista completa di senatori in carica quel giorno dalle Api
@@ -253,31 +291,56 @@ if results_sedute != -1:
                                                           parlamento_api_parlamentari_prefix+"/"+ \
                                                         "?ramo=S&data="+seduta_day+"&page_size=500&format=json"
 
-                                print "parlamento_api_incarica:"+parlamento_api_incarica
 
                                 r_incarica_list = requests.get(parlamento_api_incarica)
                                 r_incarica_json = r_incarica_list.json()
                                 totale_senatori_api = r_incarica_json['results']
 
+                            # se il n. di senatori in carica secondo le api != n. sen in carica dello sparql da' errore
+                            if len(totale_senatori_api) != len(senatori_incarica_sparql):
+                                error_type = "senatori_incarica"
+                                print error_messages[error_type] % (len(totale_senatori_api),len(senatori_incarica_sparql))
+                                error_mail_body[votazione['votazione']].append(
+                                    error_messages[error_type]% (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
+                                )
 
-                            for senatore in totale_senatori_seduta:
+                            #  trova gli eventuali senatori mancanti nelle api o nei dati dallo sparql
+
+                            for senatore_api in totale_senatori_api:
                                 trovato = False
-                                senatore_noprefix = senatore.replace(senatore_prefix,"")
-                                for senatore_api in totale_senatori_api:
+                                i=0
+                                while not trovato and i < len(senatori_incarica_sparql):
+                                    senatore_sparql=senatori_incarica_sparql[i]['senatore']
+                                    senatore_noprefix = senatore_sparql.replace(senatore_prefix,"")
+                                    if senatore_noprefix == str(senatore_api['carica']['parliament_id']):
+                                        trovato = True
+                                    i+=1
+                                if not trovato:
+                                    # id_mismatch_sparql
+                                    error_type = "id_mismatch_sparql"
+                                    print error_messages[error_type] % (str(senatore_api['carica']['parliament_id']))
+                                    error_mail_body[votazione['votazione']].append(
+                                        error_messages[error_type]% (str(senatore_api['carica']['parliament_id']))
+                                    )
+
+                            for senatore_sparql in senatori_incarica_sparql:
+                                trovato = False
+                                senatore_noprefix = senatore_sparql['senatore'].replace(senatore_prefix,"")
+                                i=0
+                                while not trovato and i < len(totale_senatori_api):
+                                    senatore_api = totale_senatori_api[i]
 
                                     if senatore_noprefix == str(senatore_api['carica']['parliament_id']):
                                         trovato = True
-
+                                    i += 1
 
                                 if not trovato:
-                                    # print u"senatore nome:"+senatore_api['anagrafica']['nome']+ \
-                                    #       +senatore_api['anagrafica']['cognome']+ \
-                                    #       u" id:" +senatore+ u" non trovato in Senatori in Carica"
-
-                                    # TODO: aggingere questo caso al log di errore
-                                    print u" id:" +senatore_noprefix+ u" non trovato in Senatori in Carica"
-
-
+                                    # id_mismatch_api
+                                    error_type = "id_mismatch_api"
+                                    print error_messages[error_type] % (str(senatore_noprefix))
+                                    error_mail_body[votazione['votazione']].append(
+                                        error_messages[error_type]% (str(senatore_noprefix))
+                                    )
 
                         else:
                             error_type = "connection_fail"
@@ -306,7 +369,7 @@ if results_sedute != -1:
 
 else:
     error_type = "connection_fail"
-    error_mail_body.append['connection'](error_messages[error_type]%query_sedute)
+    error_mail_body['connection'].append(error_messages[error_type]%query_sedute)
 
 
 # se c'e' stato qualche errore manda la mail agli amministratori di sistema
