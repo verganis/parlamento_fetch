@@ -9,7 +9,7 @@ from requests import ConnectionError
 
 # la fuzione import_seduta dato un numero di seduta cerca di importare i dati della seduta
 # e tutti i dati delle votazioni collegate
-def import_seduta(results_sedute):
+def import_seduta(results_sedute, error_mail_body):
     seduta_day = ""
     sedute_result = {}
     for seduta in results_sedute:
@@ -277,7 +277,7 @@ def import_seduta(results_sedute):
                             error_type = "senatori_incarica"
                             print error_messages[error_type] % (len(totale_senatori_api),len(senatori_incarica_sparql))
                             error_mail_body[votazione['votazione']].append(
-                                error_messages[error_type]% (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
+                                error_messages[error_type]% (len(totale_senatori_api),len(senatori_incarica_sparql))
                             )
 
                         #  trova gli eventuali senatori mancanti nelle api o nei dati dallo sparql
@@ -401,6 +401,7 @@ query_sedute = """
     FILTER( ?numero > """ +str(n_last_seduta) +""")
     }
     ORDER BY ?numero
+    LIMIT 1
     """
 
 results_sedute = None
@@ -418,7 +419,7 @@ if results_sedute is not None:
 
     # se sono presenti sedute non importate le importa
     if len(results_sedute)>0:
-        total_result = import_seduta(results_sedute)
+        total_result = import_seduta(results_sedute, error_mail_body)
 
         # scrive un file per ogni seduta importata con tutti i dati delle votazioni associate
         for seduta in total_result.keys():

@@ -20,7 +20,7 @@ def send_error_mail(script_name, smtp_server, notification_system, address_list,
 
 
     if error_c>0:
-        print "errors"
+        print "there were some errors"
         send_email(smtp_server,
                    notification_system,
                    address_list,
@@ -28,7 +28,7 @@ def send_error_mail(script_name, smtp_server, notification_system, address_list,
                    content= content_str
         )
     else:
-        print "no errors"
+        print "there were no errors"
 
 
 
