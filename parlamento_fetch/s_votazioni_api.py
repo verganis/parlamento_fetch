@@ -132,6 +132,7 @@ if results_sedute is not None:
             except ConnectionError,e:
                 error_type = "sparql_connection_fail"
                 error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
                 exit(0)
 
 
@@ -174,6 +175,7 @@ if results_sedute is not None:
                 except ConnectionError,e:
                     error_type = "sparql_connection_fail"
                     error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
                     exit(0)
 
                 if results_votazioni is not None:
@@ -204,6 +206,7 @@ if results_sedute is not None:
                         except ConnectionError,e:
                             error_type = "sparql_connection_fail"
                             error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                            send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
                             exit(0)
 
                         print "tipo votazione: "+results_votazione[osr_prefix+'tipoVotazione'][0]
@@ -327,6 +330,7 @@ if results_sedute is not None:
                                 except ConnectionError,e:
                                     error_type = "sparql_connection_fail"
                                     error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                                    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
                                     exit(0)
 
 
@@ -346,8 +350,14 @@ if results_sedute is not None:
                                                           parlamento_api_parlamentari_prefix+"/"+ \
                                                         "?ramo=S&data="+seduta_day+"&page_size=500&format=json"
 
-
-                                r_incarica_list = requests.get(parlamento_api_incarica)
+                                try:
+                                    r_incarica_list = requests.get(parlamento_api_incarica)
+                                except requests.exceptions.ConnectionError:
+                                    error_type = "api_connection_fail"
+                                    error_mail_body['api_connection'].append(error_messages[error_type]%parlamento_api_incarica)
+                                    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+                                    exit(0)
+                                    
                                 r_incarica_json = r_incarica_list.json()
                                 totale_senatori_api = r_incarica_json['results']
 
