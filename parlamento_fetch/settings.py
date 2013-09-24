@@ -7,8 +7,7 @@ script_name = "Open data Senato Update"
 osr_prefix = "http://dati.senato.it/osr/"
 senatore_prefix = "http://dati.senato.it/senatore/"
 
-# sparql_senato = "http://dati.senato.it/sparql"
-sparql_senato = "http://dati.senato.it/sparq"
+sparql_senato = "http://dati.senato.it/sparql"
 sparql_camera = "http://dati.camera.it/sparql"
 date_format = '%Y%m%d'
 legislatura_id = '17'

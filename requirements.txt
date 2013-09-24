@@ -1,3 +1,4 @@
+requests
 SPARQLWrapper==1.5.2
 Scrapy==0.16.4
 Twisted==12.3.0
