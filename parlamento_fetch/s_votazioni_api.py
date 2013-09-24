@@ -6,6 +6,7 @@ import glob, os
 from settings_local import *
 import logging
 import requests
+from requests import ConnectionError
 
 # controlla le votazioni presenti sul sito del Senato e le confronta con quelle
 # gia' importate tramite le API di Open Parlamento
@@ -15,17 +16,17 @@ import requests
 
 
 error_messages={
-    'connection_fail':'http error: Connection refused for the query: %s',
+    'sparql_connection_fail':'http error: Connection refused from the Sparql for the following query: %s',
+    'api_connection_fail':'http error: Connection refused from the api for the following query: %s',
+    'sparql_id_mismatch': "id: %s presente nelle api ma non nello Sparql end-point",
+    'api_id_mismatch': "id: %s presente nelle Sparql end-point ma non nelle api",
     'somma_votanti': "Somma votanti non corretta: %s != %s",
     'somma_presenti': "Somma presenti non corretta: %s != %s",
     'senatori_incarica': "N. Senatori in carica non coincide: %s != %s",
-    'id_mismatch_sparql': "id: %s presente nelle api ma non nello Sparql end-point",
-    'id_mismatch_api': "id: %s presente nelle Sparql end-point ma non nelle api",
-
 }
 
 
-error_mail_body= {'connection': []}
+error_mail_body= {'sparql_connection': []}
 
 campi_controllo_somme=[
     # lista di id,totale
@@ -77,9 +78,19 @@ query_sedute = """
     }
     ORDER BY ?numero
     """
-results_sedute = run_query(sparql_senato, query_sedute,query_delay)
 
-if results_sedute != -1:
+results_sedute = None
+
+try:
+    results_sedute = run_query(sparql_senato, query_sedute,query_delay)
+except ConnectionError,e:
+    error_type = "sparql_connection_fail"
+    error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+    exit(0)
+
+
+if results_sedute is not None:
+
     # se sono presenti sedute non importate le importa
     if len(results_sedute)>0:
         for seduta in results_sedute:
@@ -106,9 +117,22 @@ if results_sedute != -1:
                 }
                 """
 
-            results_seduta = run_query(sparql_senato, query_seduta,query_delay, Json=False)
-            if results_seduta != -1:
+            results_seduta = None
+            try:
+                results_seduta = run_query(sparql_senato, query_seduta,query_delay, Json=False)
+            except ConnectionError,e:
+                error_type = "sparql_connection_fail"
+                error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                exit(0)
 
+
+            if results_seduta is None:
+                # error_type = "sparql_connection_fail"
+                # error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                # TODO: definire errore per la seduta non trovata partendo dal numero
+                exit(0)
+
+            else:
                 # aggiunge i metadati della seduta al dizionario totale
                 total_result['metadata'] = results_seduta
                 # prende il giorno della seduta per verificare i senatori in carica quel giorno
@@ -118,9 +142,6 @@ if results_sedute != -1:
                 if seduta_day != results_seduta[0]['data']:
                     seduta_new_day = True
                     seduta_day = results_seduta[0]['data']
-
-
-
 
                 #cerca tutte le votazioni per la presente seduta e se ce ne sono le importa
 
@@ -138,8 +159,15 @@ if results_sedute != -1:
                     ORDER BY ?numero
                     """
 
-                results_votazioni = run_query(sparql_senato, query_seduta_votazioni,query_delay)
-                if results_votazioni!=-1:
+                results_votazioni = None
+                try:
+                    results_votazioni = run_query(sparql_senato, query_seduta_votazioni,query_delay)
+                except ConnectionError,e:
+                    error_type = "sparql_connection_fail"
+                    error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                    exit(0)
+
+                if results_votazioni is not None:
                     total_result['votazioni']={}
 
                     for votazione in results_votazioni:
@@ -159,11 +187,22 @@ if results_sedute != -1:
                             }
                             ORDER BY ?field
                             """
-                        results_votazione = run_query(sparql_senato, query_votazione,query_delay,Json=True)
+
+
+                        results_votazione = None
+                        try:
+                            results_votazione = run_query(sparql_senato, query_votazione,query_delay,Json=True)
+                        except ConnectionError,e:
+                            error_type = "sparql_connection_fail"
+                            error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                            exit(0)
 
                         print "tipo votazione: "+results_votazione[osr_prefix+'tipoVotazione'][0]
 
-                        if results_votazione!=-1:
+                        if results_votazione is None:
+                            # TODO: definire errore per la votazione non trovata partendo dal numero
+                            exit(0)
+                        else:
                             total_result['votazioni'][votazione['votazione']] = results_votazione
 
                             #     controlla la correttezza dei dati della votazione
@@ -272,7 +311,14 @@ if results_sedute != -1:
                                     } ORDER BY ?cognome ?nome
                                     """ % ( legislatura_id, seduta_day, seduta_day)
 
-                                senatori_incarica_sparql = run_query(sparql_senato, query_incarica,query_delay)
+
+                                senatori_incarica_sparql = None
+                                try:
+                                    senatori_incarica_sparql = run_query(sparql_senato, query_incarica,query_delay)
+                                except ConnectionError,e:
+                                    error_type = "sparql_connection_fail"
+                                    error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+                                    exit(0)
 
 
 
@@ -316,8 +362,8 @@ if results_sedute != -1:
                                         trovato = True
                                     i+=1
                                 if not trovato:
-                                    # id_mismatch_sparql
-                                    error_type = "id_mismatch_sparql"
+                                    # sparql_id_mismatch
+                                    error_type = "sparql_id_mismatch"
                                     print error_messages[error_type] % (str(senatore_api['carica']['parliament_id']))
                                     error_mail_body[votazione['votazione']].append(
                                         error_messages[error_type]% (str(senatore_api['carica']['parliament_id']))
@@ -335,41 +381,25 @@ if results_sedute != -1:
                                     i += 1
 
                                 if not trovato:
-                                    # id_mismatch_api
-                                    error_type = "id_mismatch_api"
+                                    # api_id_mismatch
+                                    error_type = "api_id_mismatch"
                                     print error_messages[error_type] % (str(senatore_noprefix))
                                     error_mail_body[votazione['votazione']].append(
                                         error_messages[error_type]% (str(senatore_noprefix))
                                     )
 
-                        else:
-                            error_type = "connection_fail"
-                            error_mail_body['connection'].append(error_messages[error_type]%query_votazione)
 
-
-                else:
-                    error_type = "connection_fail"
-                    error_mail_body['connection'].append(error_messages[error_type]%query_seduta_votazioni)
-
-                write_file(output_folder+
-                           seduta_file_pattern+
-                           seduta['numero']+".json",
-                           total_result,
-                           fields=None,
-                           print_metadata=False,
-                           Json=True
-                    )
-
-            else:
-                error_type = "connection_fail"
-                error_mail_body['connection'].append(error_messages[error_type]%query_seduta)
+            write_file(output_folder+
+                       seduta_file_pattern+
+                       seduta['numero']+".json",
+                       total_result,
+                       fields=None,
+                       print_metadata=False,
+                       Json=True
+                )
 
     else:
         print "nessuna nuova seduta"
-
-else:
-    error_type = "connection_fail"
-    error_mail_body['connection'].append(error_messages[error_type]%query_sedute)
 
 
 # se c'e' stato qualche errore manda la mail agli amministratori di sistema

@@ -11,9 +11,9 @@ import difflib
 import smtplib
 from email.mime.text import MIMEText
 import time
+from requests import ConnectionError
 
 
-# indents XML file to achieve prettyprint format
 def indent(elem, level=0):
     i = "\n" + level*"  "
     if len(elem):
@@ -40,13 +40,17 @@ def run_query(sparql_endpoint, query, query_delay=0, Json=False):
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
 
-    # sleep is needed to preserve sparql connection, otherwise it goes down
+    # sleep is needed to preserve sparql connection, otherwise sparql end point can go down
     if query_delay>0:
         time.sleep(query_delay)
     try:
         results = sparql.query().convert()
     except urllib2.HTTPError:
-        return -1
+        raise ConnectionError
+    except EndPointNotFound:
+        raise ConnectionError(query)
+
+
     if Json is True:
         # riorganizza la struttura dati
         pretty_result={}
