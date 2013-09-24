@@ -20,6 +20,7 @@ def send_error_mail(script_name, smtp_server, notification_system, address_list,
 
 
     if error_c>0:
+        print "errors"
         send_email(smtp_server,
                    notification_system,
                    address_list,
