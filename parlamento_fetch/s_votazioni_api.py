@@ -1,7 +1,8 @@
 import json
 import pprint
 import re
-from utils.sparql_tools import run_query, write_file, send_email
+from utils.sparql_tools import run_query
+from utils.utils import send_email, send_error_mail, write_file
 import glob, os
 from settings_local import *
 import logging
@@ -26,7 +27,7 @@ error_messages={
 }
 
 
-error_mail_body= {'sparql_connection': []}
+error_mail_body= {'sparql_connection': [],'api_connection': []}
 
 campi_controllo_somme=[
     # lista di id,totale
@@ -58,8 +59,15 @@ parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamen
                         parlamento_api_sedute_prefix +"/"+\
                         "?ramo=S&ordering=-numero&page_size=500&format=json"
 
+r_incarica_list=None
+try:
+    r_incarica_list = requests.get(parlamento_api_sedute)
+except requests.exceptions.ConnectionError:
+    error_type = "api_connection_fail"
+    error_mail_body['api_connection'].append(error_messages[error_type]%parlamento_api_sedute)
+    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+    exit(0)
 
-r_incarica_list = requests.get(parlamento_api_sedute)
 r_incarica_json = r_incarica_list.json()
 n_last_seduta = r_incarica_json['results'][0]['numero']
 
@@ -86,6 +94,7 @@ try:
 except ConnectionError,e:
     error_type = "sparql_connection_fail"
     error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
+    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
     exit(0)
 
 
@@ -401,26 +410,6 @@ if results_sedute is not None:
     else:
         print "nessuna nuova seduta"
 
-
 # se c'e' stato qualche errore manda la mail agli amministratori di sistema
+send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
-error_keys = error_mail_body.keys()
-content_str =""
-error_c = 0
-for error_key in error_keys:
-    # serializza i msg di errori
-    if len(error_mail_body[error_key])>0:
-        for msg in error_mail_body[error_key]:
-            content_str+=error_key+" : "+msg+"\n"
-            error_c+=1
-
-
-if error_c>0:
-    send_email(smtp_server,
-               notification_system,
-               notification_list,
-               subject= script_name + " - " + str(error_c) +" errori",
-               content= content_str
-    )
-else:
-    print "no errors"
