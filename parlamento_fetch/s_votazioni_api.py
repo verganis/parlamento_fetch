@@ -15,6 +15,10 @@ def import_seduta(results_sedute, error_mail_body):
     for seduta in results_sedute:
         # total result will be the comprehensive collection of data about a seduta and
         # all its votazioni
+
+        seduta_isimported = True
+        votazioni_isimported = {}
+
         sedute_result[seduta['numero']]= {}
         seduta_result = {}
         print "query seduta " + seduta['numero']
@@ -48,12 +52,15 @@ def import_seduta(results_sedute, error_mail_body):
 
 
         if results_seduta is None:
-            # error_type = "sparql_connection_fail"
-            # error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
-            # TODO: definire errore per la seduta non trovata partendo dal numero
-            exit(0)
+            # se non trova la seduta genera msg di errore
+            error_type = "obj_not_found"
+            error_mail_body['sparql_connection'].append(error_messages[error_type]%query_seduta)
+
 
         else:
+
+            # TODO: inserimenti con api dei dati della seduta
+
             # aggiunge i metadati della seduta al dizionario totale
             seduta_result['metadata'] = results_seduta
             # prende il giorno della seduta per verificare i senatori in carica quel giorno
@@ -93,6 +100,7 @@ def import_seduta(results_sedute, error_mail_body):
                 seduta_result['votazioni']={}
 
                 for votazione in results_votazioni:
+                    votazioni_isimported[votazione['votazione']]=True
 
                     error_mail_body[votazione['votazione']]=[]
 
@@ -123,12 +131,16 @@ def import_seduta(results_sedute, error_mail_body):
                     print "tipo votazione: "+results_votazione[osr_prefix+'tipoVotazione'][0]
 
                     if results_votazione is None:
-                        # TODO: definire errore per la votazione non trovata partendo dal numero
-                        exit(0)
+                        # se non trova la votazione genera msg di errore
+                        error_type = "obj_not_found"
+                        error_mail_body['sparql_connection'].append(error_messages[error_type]%query_votazione)
+
                     else:
                         seduta_result['votazioni'][votazione['votazione']] = results_votazione
 
-                        #     controlla la correttezza dei dati della votazione
+                        #  CHECK 1
+                        #  controlla la correttezza dei dati numerici della votazione
+                        #  e delle liste di id
                         check_campi = []
 
                         # se la votazione non e' segreta
@@ -174,8 +186,21 @@ def import_seduta(results_sedute, error_mail_body):
                                 if not campo_validation:
                                     print campi[0]+" : "+str(campo_validation)
 
+                        # dopo il controllo di check campi passa il valore finale a votazioni_isimported
+                        check_conteggi = True
+                        for check in check_campi:
+                            if check is False:
+                                check_conteggi = False
+
+                        if check_conteggi is False:
+                            votazioni_isimported[votazione['votazione']]=False
+
+
+                        #  CHECK 2
                         # effettua controlli sulle somme
                         # votanti= favorevoli + contrari + astenuti
+
+                        check_somme = True
                         somma_votanti = int(results_votazione[osr_prefix+"favorevoli"][0]) + \
                                         int(results_votazione[osr_prefix+"contrari"][0])+ \
                                         int(results_votazione[osr_prefix+"astenuti"][0])
@@ -183,7 +208,7 @@ def import_seduta(results_sedute, error_mail_body):
                             print "Somma votanti non corretta: %s != %s" % (somma_votanti, results_votazione[osr_prefix+"votanti"][0])
                             error_type = "somma_votanti"
                             error_mail_body[votazione['votazione']].append(error_messages[error_type]% (somma_votanti, results_votazione[osr_prefix+"votanti"][0]))
-
+                            check_somme = False
 
                         # presenti = votanti + presidente +  richiedenteNonVotante
                         somma_presenti = int(results_votazione[osr_prefix+"votanti"][0])
@@ -196,43 +221,49 @@ def import_seduta(results_sedute, error_mail_body):
                             print "Somma presenti non corretta: %s != %s" % (somma_presenti, results_votazione[osr_prefix+"presenti"][0])
                             error_type = "somma_presenti"
                             error_mail_body[votazione['votazione']].append(error_messages[error_type]% (somma_presenti, results_votazione[osr_prefix+"presenti"][0]))
+                            check_somme = False
+
+                        if check_somme is False:
+                            votazioni_isimported[votazione['votazione']]=False
 
 
-                        #  effettua i controlli sulla votazione basati sui senatori in carica quel giorno
+                        # CHECK 3
+                        # effettua i controlli sulla votazione basati sui senatori in carica quel giorno
                         # da notare che la data di fine Mandato puo' anche non esserci se il sen.
                         # e' attualmente in carica
+
+                        check_incarica = True
 
                         # prende la lista completa di senatori in carica quel giorno dallo sparql endpoint
                         if seduta_new_day is True:
 
                             query_incarica = """
 
-                                    PREFIX osr: <http://dati.senato.it/osr/>
-                                    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-                                    PREFIX ocd:<http://dati.camera.it/ocd/>
+                                PREFIX osr: <http://dati.senato.it/osr/>
+                                PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                                PREFIX ocd:<http://dati.camera.it/ocd/>
 
-                                    SELECT DISTINCT
-                                    ?senatore ?nome ?cognome
-                                    ?inizioMandato ?fineMandato
-                                    ?tipoMandato
+                                SELECT DISTINCT
+                                ?senatore ?nome ?cognome
+                                ?inizioMandato ?fineMandato
+                                ?tipoMandato
 
-                                    WHERE {
-                                    ?senatore a osr:Senatore.
-                                    ?senatore foaf:firstName ?nome.
-                                    ?senatore foaf:lastName ?cognome.
-                                    ?senatore osr:mandato ?mandato.
-                                    ?mandato osr:legislatura ?legislaturaMandato.
-                                    ?mandato osr:inizio ?inizioMandato.
-                                    ?mandato osr:tipoMandato ?tipoMandato.
-                                    OPTIONAL { ?mandato osr:fine ?fineMandato. }
+                                WHERE {
+                                ?senatore a osr:Senatore.
+                                ?senatore foaf:firstName ?nome.
+                                ?senatore foaf:lastName ?cognome.
+                                ?senatore osr:mandato ?mandato.
+                                ?mandato osr:legislatura ?legislaturaMandato.
+                                ?mandato osr:inizio ?inizioMandato.
+                                ?mandato osr:tipoMandato ?tipoMandato.
+                                OPTIONAL { ?mandato osr:fine ?fineMandato. }
 
-                                    FILTER(str(?legislaturaMandato)='%s')
-                                    FILTER(?inizioMandato <= "%s"^^xsd:date )
-                                    FILTER(!bound(?fineMandato) || ?fineMandato > "%s"^^xsd:date )
+                                FILTER(str(?legislaturaMandato)='%s')
+                                FILTER(?inizioMandato <= "%s"^^xsd:date )
+                                FILTER(!bound(?fineMandato) || ?fineMandato > "%s"^^xsd:date )
 
-
-                                    } ORDER BY ?cognome ?nome
-                                    """ % ( legislatura_id, seduta_day, seduta_day)
+                                } ORDER BY ?cognome ?nome
+                                """ % ( legislatura_id, seduta_day, seduta_day)
 
 
                             senatori_incarica_sparql = None
@@ -243,7 +274,6 @@ def import_seduta(results_sedute, error_mail_body):
                                 error_mail_body['sparql_connection'].append(error_messages[error_type]%e)
                                 send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
                                 exit(0)
-
 
 
                         # controlla che tutti i senatori in astenuto, congedo missione, contrario,
@@ -260,7 +290,7 @@ def import_seduta(results_sedute, error_mail_body):
                                                       parlamento_api_leg_prefix + "/" + \
                                                       parlamento_api_parlamentari_prefix+"/"+ \
                                                       "?ramo=S&data="+seduta_day+"&page_size=500&format=json"
-
+                            r_incarica_list= None
                             try:
                                 r_incarica_list = requests.get(parlamento_api_incarica)
                             except requests.exceptions.ConnectionError:
@@ -279,6 +309,7 @@ def import_seduta(results_sedute, error_mail_body):
                             error_mail_body[votazione['votazione']].append(
                                 error_messages[error_type]% (len(totale_senatori_api),len(senatori_incarica_sparql))
                             )
+                            check_incarica = False
 
                         #  trova gli eventuali senatori mancanti nelle api o nei dati dallo sparql
 
@@ -298,6 +329,7 @@ def import_seduta(results_sedute, error_mail_body):
                                 error_mail_body[votazione['votazione']].append(
                                     error_messages[error_type]% (str(senatore_api['carica']['parliament_id']))
                                 )
+                                check_incarica=False
 
                         for senatore_sparql in senatori_incarica_sparql:
                             trovato = False
@@ -317,6 +349,25 @@ def import_seduta(results_sedute, error_mail_body):
                                 error_mail_body[votazione['votazione']].append(
                                     error_messages[error_type]% (str(senatore_noprefix))
                                 )
+                                check_incarica=False
+
+
+                        if check_incarica is False:
+                            votazioni_isimported[votazione['votazione']]=False
+
+
+                        # se i 4 check sulla votazione sono andati a buon fine il valore is_imported = True
+                        # TODO: insert votazione api
+
+
+            # una volta analizzate tutte le votazioni della seduta si va a inserire il valore is_imported
+            # per la seduta tramite api
+            for votazione_isimported in votazioni_isimported.keys():
+                if votazioni_isimported is False:
+                    seduta_isimported = False
+
+            # TODO: update dati seduta inserendo il nuovo is_imported value
+
 
         sedute_result[seduta['numero']]= seduta_result
     return sedute_result
@@ -340,6 +391,7 @@ error_messages={
     'somma_votanti': "Somma votanti non corretta: %s != %s",
     'somma_presenti': "Somma presenti non corretta: %s != %s",
     'senatori_incarica': "N. Senatori in carica non coincide: %s != %s",
+    'obj_not_found': "Object not found in DB with the following query: %s"
 }
 
 
@@ -401,7 +453,7 @@ query_sedute = """
     FILTER( ?numero > """ +str(n_last_seduta) +""")
     }
     ORDER BY ?numero
-    LIMIT 1
+
     """
 
 results_sedute = None
@@ -434,6 +486,11 @@ if results_sedute is not None:
 
     else:
         print "nessuna nuova seduta"
+
+
+# check sedute importate nel db OP con is_imported = 0
+# TODO: call api per vedere quali sono le sedute interessate
+# chiama import_seduta per la lista di sedute interessate
 
 # se c'e' stato qualche errore manda la mail agli amministratori di sistema
 send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)

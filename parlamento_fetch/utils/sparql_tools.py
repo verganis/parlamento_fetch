@@ -38,10 +38,9 @@ def run_query(sparql_endpoint, query, query_delay=0, Json=False):
         time.sleep(query_delay)
     try:
         results = sparql.query().convert()
-    except urllib2.HTTPError:
-        raise ConnectionError
-    except EndPointNotFound:
+    except (urllib2.HTTPError, EndPointNotFound, urllib2.URLError):
         raise ConnectionError(query)
+
 
 
     if Json is True:
