@@ -354,10 +354,29 @@ def import_seduta(results_sedute, error_mail_body):
 
                         if check_incarica is False:
                             votazioni_isimported[votazione['votazione']]=False
+                        else:
+                            # TODO: calcolare gli assenti
+                            # se un senatore in carica non e' nella lista senatori_seduta_sparql che
+                            # comprende i presenti + presidente + in congedo missione , allora
+                            # viene considerato assente
+                            senatori_assenti = []
+                            for senatore_ass in senatori_incarica_sparql:
+                                senatore_ass_id = senatore_ass['senatore']
+                                trovato = False
+                                i=0
+                                while not trovato and i < len(senatori_seduta_sparql):
+                                    if senatore_ass_id == senatori_seduta_sparql[i]:
+                                        trovato = True
+                                    i += 1
+
+                                if trovato is False:
+                                    senatori_assenti.append(senatore_ass)
+
+
 
 
                         # se i 4 check sulla votazione sono andati a buon fine il valore is_imported = True
-                        # TODO: insert votazione api
+                        # TODO: insert votazione api, usare il vettore assenti
 
 
             # una volta analizzate tutte le votazioni della seduta si va a inserire il valore is_imported
@@ -441,6 +460,8 @@ n_last_seduta = r_incarica_json['results'][0]['numero']
 # vedo su sparql se sono presenti sedute successive
 print "query sedute"
 
+
+
 query_sedute = """
     PREFIX osr: <http://dati.senato.it/osr/>
     PREFIX ocd: <http://dati.camera.it/ocd/>
@@ -455,7 +476,6 @@ query_sedute = """
     ORDER BY ?numero
 
     """
-
 results_sedute = None
 
 try:
