@@ -495,7 +495,7 @@ if results_sedute is not None:
 
         # scrive un file per ogni seduta importata con tutti i dati delle votazioni associate
         for seduta in total_result.keys():
-            write_file(output_folder+
+            write_file(output_path+
                        seduta_file_pattern+
                        seduta+".json",
                        total_result[seduta],

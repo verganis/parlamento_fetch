@@ -36,10 +36,15 @@ cariche_prefix = "cariche"
 seduta_prefix = "seduta"
 votazione_prefix = "votazione"
 votazioni_prefix = "votazioni"
+votazioni_non_elettroniche_prefix = "vne"
+
+gdoc_prefix = 'https://docs.google.com/spreadsheet/ccc?key='
 
 query_delay = 0.01
 
-output_folder = BASE_PATH + "/" + "output/"
+
+output_folder = 'OUTPUTFOLDER'
+output_path = BASE_PATH + "/" + output_folder +"/"
 
 notification_list = [
     "MAIL",
@@ -54,10 +59,11 @@ smtp_server = 'SMTP SERVER ADDRESS'
 
 no_difference_msg = "Nessuna differenza rilevata"
 
-
 # Google Account credentials
 g_user = 'USERNAME@gmail.com'
 g_password = 'PASSWORD'
+
+
 
 LOGGING = {
 

@@ -1,7 +1,8 @@
 import json
 import pprint
 import re
-from utils.sparql_tools import run_query, write_file, send_email
+from utils.sparql_tools import run_query
+from utils.utils import send_email, write_file
 import glob, os
 from settings_local import *
 import logging
@@ -19,7 +20,7 @@ import logging
 # cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima che
 #  e' stata gia' importata
 
-os.chdir(output_folder)
+os.chdir(output_path)
 seduta_file_pattern = senato_prefix + prefix_separator + seduta_prefix + \
                       prefix_separator + legislatura_id + prefix_separator
 
@@ -134,7 +135,7 @@ if results_sedute != -1:
 
                     else:
                         send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
-                write_file(output_folder+
+                write_file(output_path+
                            seduta_file_pattern+
                            seduta['numero']+".json",
                            total_result,

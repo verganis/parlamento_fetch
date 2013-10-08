@@ -9,5 +9,8 @@ notification_list=[
 smtp_server='localhost'
 
 # Google Account credentials
-g_user = 'stefano.vergani.it@gmail.com'
-g_password = 'macaroni1981'
+g_user = 'openpolis.script@gmail.com'
+g_password = '4622S1m807K2F13'
+
+# local output folder
+output_folder = 'output'

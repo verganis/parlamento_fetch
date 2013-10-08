@@ -36,7 +36,7 @@ def do_fetch(args):
         """
 
         results_atti = run_query(sparql_camera, query_atti)
-        write_file(output_folder+atti_prefix+camera_prefix+results_atti[0]["rif_leg"]+prefix_separator+today,results_atti)
+        write_file(output_path+atti_prefix+camera_prefix+results_atti[0]["rif_leg"]+prefix_separator+today,results_atti)
 
         # per ogni atto trovato estrae tutti i dettagli e li mette in un file
         for atto in results_atti:
@@ -59,7 +59,7 @@ def do_fetch(args):
             """ % atto["atto"]
 
             results_dettaglio = run_query(sparql_camera, query_dettaglio)
-            write_file(output_folder+atto["atto"],results_dettaglio)
+            write_file(output_path+atto["atto"],results_dettaglio)
 
 
 def main(args):

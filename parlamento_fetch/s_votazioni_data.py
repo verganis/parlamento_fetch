@@ -60,7 +60,7 @@ for votazioni in results_votazioni:
 
     fields_votazione = ["votazione","label","favorevoli","contrari","astenuti","presenti","missione","maggioranza","nlegale","esito","votanti"]
     results_votazione = run_query(settings.sparql_senato, query_votazione)
-    write_file(settings.output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
+    write_file(settings.output_path+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
 
     # TODO: tirare giu tutti i dati rispettivi ai VOTI singoli e metterli in un file
 
@@ -81,7 +81,7 @@ for votazioni in results_votazioni:
     #
     #     fields_aggregazione = ["s"]
     #     results_aggregazione = run_query(sparql_senato, query_aggregazione, fields_aggregazione)
-    #     write_to_file(output_folder+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
+    #     write_to_file(output_path+"s_votazioni_"+today+"_"+nvotazione,fields_votazione, results_votazione)
     #
     #
     #     sparql.setQuery(query_aggregazione)

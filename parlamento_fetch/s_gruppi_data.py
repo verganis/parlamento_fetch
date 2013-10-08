@@ -34,4 +34,4 @@ ORDER BY ?surname
 fields = ["name","surname", "gruppo", "datafine", "datainizio"]
 results = run_query(sparql_senato, query, fields)
 
-write_to_file(output_folder+"s_gruppi_data",fields, results)
+write_to_file(output_path+"s_gruppi_data",fields, results)

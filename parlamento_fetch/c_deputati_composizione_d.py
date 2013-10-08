@@ -19,9 +19,9 @@ mail_subject = "Differenze Composizione Senato al "+today_str
 # trova il file di composizione senato piu' recente con prefisso stabilito
 file_prefix = senato_prefix + prefix_separator + composizione_prefix
 
-today_filename = output_folder +file_prefix+today_str
+today_filename = output_path +file_prefix+today_str
 newest_filename=''
-filelist = glob.glob(output_folder + file_prefix + '*')
+filelist = glob.glob(output_path + file_prefix + '*')
 filelist = filter(lambda x: not os.path.isdir(x), filelist)
 if filelist:
     newest_filename = max(filelist, key=lambda x: os.stat(x).st_mtime)
