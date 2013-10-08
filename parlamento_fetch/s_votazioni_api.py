@@ -393,7 +393,7 @@ def import_seduta(results_sedute, error_mail_body):
 
 
 
-
+script_name = "Open data Senato Update"
 
 # controlla le votazioni presenti sul sito del Senato e le confronta con quelle
 # gia' importate tramite le API di Open Parlamento

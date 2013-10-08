@@ -1,2 +1,3 @@
 .idea
 parlamento_fetch/output/*
+parlamento_fetch/settings_local.py

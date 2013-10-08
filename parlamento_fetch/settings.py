@@ -3,7 +3,6 @@ import os.path
 
 BASE_PATH = os.path.dirname(__file__)
 
-script_name = "Open data Senato Update"
 osr_prefix = "http://dati.senato.it/osr/"
 senatore_prefix = "http://dati.senato.it/senatore/"
 
@@ -36,9 +35,10 @@ cariche_prefix = "cariche"
 seduta_prefix = "seduta"
 votazione_prefix = "votazione"
 votazioni_prefix = "votazioni"
-votazioni_non_elettroniche_prefix = "vne"
+vne_prefix = "vne"
 
 gdoc_prefix = 'https://docs.google.com/spreadsheet/ccc?key='
+vne_list_address = 'LIST ADDRESS'
 
 query_delay = 0.01
 
