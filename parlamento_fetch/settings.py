@@ -54,6 +54,11 @@ smtp_server = 'SMTP SERVER ADDRESS'
 
 no_difference_msg = "Nessuna differenza rilevata"
 
+
+# Google Account credentials
+g_user = 'USERNAME@gmail.com'
+g_password = 'PASSWORD'
+
 LOGGING = {
 
     'loggers': {

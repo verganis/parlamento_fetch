@@ -7,3 +7,7 @@ notification_list=[
 ]
 
 smtp_server='localhost'
+
+# Google Account credentials
+g_user = 'stefano.vergani.it@gmail.com'
+g_password = 'macaroni1981'
