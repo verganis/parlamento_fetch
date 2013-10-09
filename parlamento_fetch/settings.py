@@ -1,5 +1,5 @@
-from settings_local import *
 import os.path
+import settings_local
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -43,7 +43,8 @@ vne_list_address = 'LIST ADDRESS'
 query_delay = 0.01
 
 
-output_folder = 'OUTPUTFOLDER'
+# local output folder
+output_folder = 'output'
 output_path = BASE_PATH + "/" + output_folder +"/"
 
 notification_list = [
