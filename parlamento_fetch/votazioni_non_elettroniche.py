@@ -8,6 +8,11 @@ from requests import ConnectionError
 import gspread
 import csv
 
+def write_gdoc_log(worksheet, row, is_imported, log_msg):
+    worksheet.update_acell('C'+str(row), is_imported)
+    worksheet.update_acell('D'+str(row), log_msg)
+
+
 script_name = "Votazioni non elettroniche"
 
 error_messages={
@@ -39,32 +44,34 @@ list_values = list_worksheet.get_all_values()
 # lista delle votazioni da importare
 vne_to_import = []
 
-for vne_sheet in list_values:
+for vne_index, vne_address_row in enumerate(list_values):
     # estrae dal link la chiave del file
     # da https://docs.google.com/spreadsheet/ccc?key=0AnpZgx29pl3adGJUMHFVRHpudnI0MDVlY1lnRHBNNmc&usp=drive_web#gid=0
     # a 0AnpZgx29pl3adGJUMHFVRHpudnI0MDVlY1lnRHBNNmc&usp
-    start = vne_sheet[1].find('key=')
+    start = vne_address_row[1].find('key=')
     if start is not -1:
-        end = vne_sheet[1].find('&', start)
-        vne_key = vne_sheet[1][start+4:end]
+        end = vne_address_row[1].find('&', start)
+        vne_key = vne_address_row[1][start+4:end]
 
         # se non e' stata importata prende la chiave e il titolo della votazione da importare
-        if vne_sheet[2] != '1':
+        if vne_address_row[2] != '1':
             vne_address = gdoc_prefix + vne_key
-
+            vne_spreadsheet = None
             try:
-                vne_sheet = gc.open_by_url(vne_address)
+                vne_spreadsheet = gc.open_by_url(vne_address)
             except gspread.exceptions.SpreadsheetNotFound:
                 error_type = "address_fail"
                 error_mail_body['gdoc'].append(error_messages[error_type]%vne_address)
-                # TODO: scrivere nella cella apposita l'errore nel ws lista
+                # scrive nella cella apposita l'errore nel ws lista
+                write_gdoc_log(list_worksheet,vne_index+1, '0', error_messages[error_type]%vne_address)
 
-            # Select worksheet by index. Worksheet indexes start from zero
-            dati_generali_all = vne_sheet.get_worksheet(0)
-            # Find a cell with exact string value
-            vne_titolo = dati_generali_all.acell('B9').value
-            vne_seduta = dati_generali_all.acell('B8').value
-            vne_to_import.append({'seduta': vne_seduta, 'titolo': vne_titolo, 'key': vne_key})
+            if vne_spreadsheet is not None:
+                # Select worksheet by index. Worksheet indexes start from zero
+                vne_worksheet = vne_spreadsheet.get_worksheet(0)
+                # Find a cell with exact string value
+                vne_titolo = vne_worksheet.acell('B9').value
+                vne_seduta = vne_worksheet.acell('B8').value
+                vne_to_import.append({'seduta': vne_seduta, 'titolo': vne_titolo, 'spreadsheet': vne_spreadsheet})
 
 
 # controlla sulle api che la seduta in questione esista, vicerversa da' errore
@@ -100,14 +107,7 @@ if len(vne_to_import)>0:
         pprint.pprint(vne)
 
         # per ogni vne scarica un file json con metadati e voti
-        vne_address = gdoc_prefix + vne['key']
-        vne_sheet = None
-        try:
-            vne_sheet = gc.open_by_url(vne_address)
-        except gspread.exceptions.SpreadsheetNotFound:
-            error_type = "address_fail"
-            error_mail_body['gdoc'].append(error_messages[error_type]%vne_address)
-            # TODO: scrivere nella cella apposita l'errore nel ws lista
+        vne_sheet = vne['spreadsheet']
 
         dati_generali_all = vne_sheet.worksheet("Dati generali Votazione").get_all_values()
 
@@ -126,8 +126,8 @@ if len(vne_to_import)>0:
             ramo = 'c'
         else:
             ramo = 's'
-        # prende i voti
 
+        # importa i voti
         voti = []
 
         # "id_politico",
@@ -155,7 +155,8 @@ if len(vne_to_import)>0:
                    print_metadata=False,
                    Json=True
             )
-
+        
+    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
 
 
