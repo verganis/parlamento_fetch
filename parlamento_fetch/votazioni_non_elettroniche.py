@@ -71,40 +71,57 @@ for vne_index, vne_address_row in enumerate(list_values):
                 # Find a cell with exact string value
                 vne_titolo = vne_worksheet.acell('B9').value
                 vne_seduta = vne_worksheet.acell('B8').value
-                vne_to_import.append({'seduta': vne_seduta, 'titolo': vne_titolo, 'spreadsheet': vne_spreadsheet})
+                vne_ramo = vne_worksheet.acell('B5').value
+                vne_to_import.append(
+                    {
+                        'ramo': vne_ramo,
+                        'seduta': vne_seduta,
+                        'titolo': vne_titolo,
+                        'spreadsheet': vne_spreadsheet
+                    })
 
 
 # controlla sulle api che la seduta in questione esista, vicerversa da' errore
 # se la seduta esiste controlla che non ci sia gia' una votazione con il titolo in questione
 
 if len(vne_to_import)>0:
-    parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" + \
-                            parlamento_api_sedute_prefix +"/"+ \
-                            "?ramo=S&ordering=-numero&page_size=500&format=json"
-
-    # TODO: prendere tutte le sedute dalle api, controllare che esistano le sedute delle votazioni n.e. da importare
-    # TODO: per le sedute interessate, controllare che non esistano gia' delle votazioni con titolo = a quello da importare
-
-    # alle votazioni n.e. da importare va assegnato numero 1 se la seduta non ha votazioni,
-    # se la seduta ha votazioni gli va assegnato il numero successivo a quello dell'ultima votazione della seduta
-
-    # r_sedute_list=None
-    # try:
-    #     r_sedute_list = requests.get(parlamento_api_sedute)
-    # except requests.exceptions.ConnectionError:
-    #     error_type = "api_connection_fail"
-    #     error_mail_body['api'].append(error_messages[error_type]%parlamento_api_sedute)
-    #     send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
-    #     exit(0)
-    #
-    # r_sedute_json = r_sedute_list.json()
-
 
     # DEBUG
     # vne_to_import = vne_to_import[0]
 
     for vne in vne_to_import:
-        pprint.pprint(vne)
+
+
+        parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" + \
+                                parlamento_api_sedute_prefix +"/?ramo="
+        if vne['ramo'] == '4':
+            parlamento_api_sedute += parlamento_api_camera_prefix
+        else:
+            parlamento_api_sedute += parlamento_api_senato_prefix
+
+        parlamento_api_sedute +="&ordering=-numero&page_size=500&format=json"
+
+        # TODO: controlla che esista la seduta relativa alla vne da importare
+
+        print parlamento_api_sedute
+
+        r_sedute_list=None
+        try:
+            r_sedute_list = requests.get(parlamento_api_sedute)
+        except requests.exceptions.ConnectionError:
+            error_type = "api_connection_fail"
+            error_mail_body['api_connection'].append(error_messages[error_type]%parlamento_api_sedute)
+            send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+            exit(0)
+
+        r_sedute_json = r_sedute_list.json()
+
+        # TODO: controlla che non esistano gia' delle votazioni con titolo = a quello della votazione da importare
+
+        # alle votazioni n.e. da importare va assegnato numero 1 se la seduta non ha votazioni,
+        # se la seduta ha votazioni gli va assegnato il numero successivo a quello dell'ultima votazione della seduta
+
+
 
         # per ogni vne scarica un file json con metadati e voti
         vne_sheet = vne['spreadsheet']
@@ -155,7 +172,7 @@ if len(vne_to_import)>0:
                    print_metadata=False,
                    Json=True
             )
-        
+
     send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
 

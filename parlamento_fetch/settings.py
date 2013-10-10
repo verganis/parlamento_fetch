@@ -11,11 +11,13 @@ sparql_camera = "http://dati.camera.it/sparql"
 date_format = '%Y%m%d'
 legislatura_id = '17'
 
-parlamento_api_host = "http://192.168.1.7:8002/"
+parlamento_api_host = "http://api3.staging.deppsviluppo.org/"
 parlamento_api_url = "parlamento"
 parlamento_api_leg_prefix = "legislatura-XVII"
 parlamento_api_sedute_prefix = "sedute"
 parlamento_api_parlamentari_prefix = "parlamentari"
+parlamento_api_senato_prefix = "S"
+parlamento_api_camera_prefix = "C"
 
 prefix_separator = "_"
 
