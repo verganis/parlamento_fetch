@@ -109,18 +109,18 @@ if len(vne_to_import)>0:
             error_mail_body['gdoc'].append(error_messages[error_type]%vne_address)
             # TODO: scrivere nella cella apposita l'errore nel ws lista
 
-        dati_generali_all = vne_sheet.worksheet("Dati generali Votazione")
+        dati_generali_all = vne_sheet.worksheet("Dati generali Votazione").get_all_values()
 
         # prende i metadata della votazione
         dati_generali = {}
 
-        for i in range(4,19):
-            if dati_generali_all.acell('B'+str(i)+'').value:
-                print u"riga:"+str(i)+u"-"+dati_generali_all.acell('A'+str(i)+'').value +u":" + dati_generali_all.acell('B'+str(i)+'').value.strip()
+        for i in range(3,len(dati_generali_all)):
+            if dati_generali_all[i][1] != '' and dati_generali_all[i][0] != 'carica':
+                print u"riga:"+str(i)+u"-"+dati_generali_all[i][0]+u":" + dati_generali_all[i][1]
                 dati_generali[
-                    dati_generali_all.acell('A'+str(i)+'').value
+                    dati_generali_all[i][0]
                     ] = \
-                        dati_generali_all.acell('B'+str(i)+'').value.strip()
+                    dati_generali_all[i][1].strip()
 
         if dati_generali['Ramo (4=camera, 5=senato)'] == '4':
             ramo = 'c'
