@@ -60,10 +60,10 @@ for vne_sheet in list_values:
                 # TODO: scrivere nella cella apposita l'errore nel ws lista
 
             # Select worksheet by index. Worksheet indexes start from zero
-            vne_worksheet = vne_sheet.get_worksheet(0)
+            dati_generali_all = vne_sheet.get_worksheet(0)
             # Find a cell with exact string value
-            vne_titolo = vne_worksheet.acell('B9').value
-            vne_seduta = vne_worksheet.acell('B8').value
+            vne_titolo = dati_generali_all.acell('B9').value
+            vne_seduta = dati_generali_all.acell('B8').value
             vne_to_import.append({'seduta': vne_seduta, 'titolo': vne_titolo, 'key': vne_key})
 
 
@@ -93,6 +93,8 @@ if len(vne_to_import)>0:
     # r_sedute_json = r_sedute_list.json()
 
 
+    # DEBUG
+    # vne_to_import = vne_to_import[0]
 
     for vne in vne_to_import:
         pprint.pprint(vne)
@@ -107,43 +109,52 @@ if len(vne_to_import)>0:
             error_mail_body['gdoc'].append(error_messages[error_type]%vne_address)
             # TODO: scrivere nella cella apposita l'errore nel ws lista
 
-        vne_worksheet = vne_sheet.worksheet("Dati generali Votazione")
+        dati_generali_all = vne_sheet.worksheet("Dati generali Votazione")
 
+        # prende i metadata della votazione
+        dati_generali = {}
 
-        dati_generali = {
-            'Data (formato YYYY-MM-DD)':None,
-            'Ramo (4=camera, 5=senato)':None,
-            'Url resoconto':None,
-            'N. seduta':None,
-            'Titolo votazione':None,
-            'Presenti':None,
-            'Votanti':None,
-            'Astenuti':None,
-            'Favorevoli':None,
-            'Contrari':None,
-            'In Missione':None,
-            'Assenti':None,
-            'Totale':None,
+        for i in range(4,19):
+            if dati_generali_all.acell('B'+str(i)+'').value:
+                print u"riga:"+str(i)+u"-"+dati_generali_all.acell('A'+str(i)+'').value +u":" + dati_generali_all.acell('B'+str(i)+'').value.strip()
+                dati_generali[
+                    dati_generali_all.acell('A'+str(i)+'').value
+                    ] = \
+                        dati_generali_all.acell('B'+str(i)+'').value.strip()
 
-        }
+        if dati_generali['Ramo (4=camera, 5=senato)'] == '4':
+            ramo = 'c'
+        else:
+            ramo = 's'
+        # prende i voti
 
-        
-        for i in range(4,18):
-            dati_generali[vne_worksheet.acell('A'+str(i)+'').value] = vne_worksheet.acell('B'+str(i)+'').value.strip()
-        
+        voti = []
 
+        # "id_politico",
+        # "Cognome",
+        # "Nome",
+        # "Voto"
 
-        vne_worksheet = vne_sheet.worksheet("Voti dei Parlamentari")
-        voti = vne_worksheet.get_all_values()
+        voti_all = vne_sheet.worksheet("Voti dei Parlamentari").get_all_values()
+        # rimuove dal foglio dei voti le colonne oltre la 4
+
+        for voto in voti_all[1:]:
+            # elimina eventuali spazi iniziali/finali dal valore del voto
+            voto[4] = voto[4].strip()
+            voti.append(voto[:4])
+
         vne_dict = {'metadati': dati_generali, 'voti' : voti}
 
         write_file(output_path+
-                   "vne_test"+".json",
+                   ramo+"_vne_" +
+                   dati_generali['N. seduta'] +
+                   "_"+
+                   dati_generali['Titolo votazione'][:10]+".json",
                    vne_dict,
                    fields=None,
                    print_metadata=False,
                    Json=True
-        )
+            )
 
 
 
