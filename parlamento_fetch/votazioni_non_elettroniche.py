@@ -1,6 +1,6 @@
 import pprint
 from utils.sparql_tools import run_query
-from utils.utils import send_error_mail, write_file
+from utils.utils import close_procedure, write_file
 from settings_local import *
 import logging
 import requests
@@ -18,6 +18,7 @@ script_name = "Votazioni non elettroniche"
 error_messages={
     'address_fail':'Gdoc error: following address not found: %s',
     'api_connection_fail':'http error: Connection refused from the api for the following query: %s',
+    'api_seduta_not_found': 'seduta n. %s was not found when checking the following api: %s',
 }
 
 
@@ -34,8 +35,7 @@ try:
 except gspread.exceptions.SpreadsheetNotFound:
     error_type = "address_fail"
     error_mail_body['gdoc'].append(error_messages[error_type]%vne_list_address)
-    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
-    exit(0)
+    close_procedure(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
 # Select worksheet by index. Worksheet indexes start from zero
 list_worksheet = list_sheet.get_worksheet(0)
@@ -49,6 +49,7 @@ for vne_index, vne_address_row in enumerate(list_values):
     # da https://docs.google.com/spreadsheet/ccc?key=0AnpZgx29pl3adGJUMHFVRHpudnI0MDVlY1lnRHBNNmc&usp=drive_web#gid=0
     # a 0AnpZgx29pl3adGJUMHFVRHpudnI0MDVlY1lnRHBNNmc&usp
     start = vne_address_row[1].find('key=')
+    row_in_list = vne_index+1
     if start is not -1:
         end = vne_address_row[1].find('&', start)
         vne_key = vne_address_row[1][start+4:end]
@@ -63,7 +64,7 @@ for vne_index, vne_address_row in enumerate(list_values):
                 error_type = "address_fail"
                 error_mail_body['gdoc'].append(error_messages[error_type]%vne_address)
                 # scrive nella cella apposita l'errore nel ws lista
-                write_gdoc_log(list_worksheet,vne_index+1, '0', error_messages[error_type]%vne_address)
+                write_gdoc_log(list_worksheet,row_in_list, '0', error_messages[error_type]%vne_address)
 
             if vne_spreadsheet is not None:
                 # Select worksheet by index. Worksheet indexes start from zero
@@ -74,6 +75,7 @@ for vne_index, vne_address_row in enumerate(list_values):
                 vne_ramo = vne_worksheet.acell('B5').value
                 vne_to_import.append(
                     {
+                        'row_in_list': row_in_list,
                         'ramo': vne_ramo,
                         'seduta': vne_seduta,
                         'titolo': vne_titolo,
@@ -91,19 +93,18 @@ if len(vne_to_import)>0:
 
     for vne in vne_to_import:
 
-
+        vne_ramo = None
         parlamento_api_sedute = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" + \
                                 parlamento_api_sedute_prefix +"/?ramo="
         if vne['ramo'] == '4':
-            parlamento_api_sedute += parlamento_api_camera_prefix
+            vne_ramo = parlamento_api_camera_prefix
         else:
-            parlamento_api_sedute += parlamento_api_senato_prefix
+            vne_ramo = parlamento_api_senato_prefix
 
+        parlamento_api_sedute+=vne_ramo
         parlamento_api_sedute +="&ordering=-numero&page_size=500&format=json"
 
-        # TODO: controlla che esista la seduta relativa alla vne da importare
-
-        print parlamento_api_sedute
+        # controlla che esista la seduta relativa alla vne da importare nel db di open parlamento
 
         r_sedute_list=None
         try:
@@ -111,16 +112,57 @@ if len(vne_to_import)>0:
         except requests.exceptions.ConnectionError:
             error_type = "api_connection_fail"
             error_mail_body['api_connection'].append(error_messages[error_type]%parlamento_api_sedute)
-            send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
-            exit(0)
+            close_procedure(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
-        r_sedute_json = r_sedute_list.json()
+        sedute_json = r_sedute_list.json()
+        seduta_trovata = False
+        for seduta in sedute_json['results']:
+            if int(seduta['numero']) == int(vne['seduta']):
+                seduta_trovata=True
+                break
 
-        # TODO: controlla che non esistano gia' delle votazioni con titolo = a quello della votazione da importare
+        if seduta_trovata is False:
+            error_type = "api_seduta_not_found"
+            error_msg = error_messages[error_type]%(int(vne['seduta']),parlamento_api_sedute)
+            error_mail_body['api'].append(error_msg)
+            # scrive nella cella apposita l'errore nel ws lista
+            write_gdoc_log(list_worksheet,vne['row_in_list'], '0', error_msg)
+            print 'seduta n.'+str(vne['seduta'])+' not found in api'
+        else:
 
-        # alle votazioni n.e. da importare va assegnato numero 1 se la seduta non ha votazioni,
-        # se la seduta ha votazioni gli va assegnato il numero successivo a quello dell'ultima votazione della seduta
 
+            # controlla che non esistano gia' delle votazioni con titolo = a quello della votazione da importare
+            parlamento_api_votazioni = parlamento_api_host  +parlamento_api_url +"/" + parlamento_api_leg_prefix + "/" + \
+                                    parlamento_api_votazioni_prefix +"/?ramo="
+
+            parlamento_api_votazioni+=vne_ramo
+            parlamento_api_votazioni +="&ordering=-numero&page_size=500&format=json"
+
+            r_votazioni_list=None
+            try:
+                r_votazioni_list = requests.get(parlamento_api_votazioni)
+            except requests.exceptions.ConnectionError:
+                error_type = "api_connection_fail"
+                error_mail_body['api_connection'].append(error_messages[error_type]%parlamento_api_votazioni)
+                close_procedure(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+
+            votazioni_json = r_votazioni_list.json()
+            votazione_trovata = False
+
+            for votazione in votazioni_json['results']:
+                if votazione['titolo'] == vne['titolo']:
+                    votazione_trovata=True
+                    break
+
+            if votazione_trovata is False:
+                #todo: importa la votazione
+                # TODO:alle votazioni n.e. da importare va assegnato numero 1 se la seduta non ha votazioni,
+                # se la seduta ha votazioni gli va assegnato il numero successivo a quello dell'ultima votazione della seduta
+                print "votazione non trovata"
+
+            else:
+                #todo: skip alla prossima votazione
+                print "votazione trovata"
 
 
         # per ogni vne scarica un file json con metadati e voti
@@ -173,7 +215,7 @@ if len(vne_to_import)>0:
                    Json=True
             )
 
-    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+    close_procedure(script_name, smtp_server, notification_system, notification_list, error_mail_body)
 
 
 

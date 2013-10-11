@@ -1,5 +1,4 @@
 import os.path
-import settings_local
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -15,6 +14,7 @@ parlamento_api_host = "http://api3.staging.deppsviluppo.org/"
 parlamento_api_url = "parlamento"
 parlamento_api_leg_prefix = "legislatura-XVII"
 parlamento_api_sedute_prefix = "sedute"
+parlamento_api_votazioni_prefix = "votazioni"
 parlamento_api_parlamentari_prefix = "parlamentari"
 parlamento_api_senato_prefix = "S"
 parlamento_api_camera_prefix = "C"
@@ -38,6 +38,12 @@ seduta_prefix = "seduta"
 votazione_prefix = "votazione"
 votazioni_prefix = "votazioni"
 vne_prefix = "vne"
+
+
+# Google Account credentials
+g_user = 'USERNAME@gmail.com'
+g_password = 'PASSW'
+
 
 gdoc_prefix = 'https://docs.google.com/spreadsheet/ccc?key='
 vne_list_address = 'LIST ADDRESS'

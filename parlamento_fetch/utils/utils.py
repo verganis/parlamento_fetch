@@ -100,3 +100,6 @@ def create_diff(filename1, filename2):
 
     return '\n'.join(list(diff))
 
+def close_procedure(script_name, smtp_server, notification_system, notification_list, error_mail_body):
+    send_error_mail(script_name, smtp_server, notification_system, notification_list, error_mail_body)
+    exit(0)
