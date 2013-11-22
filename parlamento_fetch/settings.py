@@ -48,7 +48,7 @@ g_password = 'PASSW'
 gdoc_prefix = 'https://docs.google.com/spreadsheet/ccc?key='
 vne_list_address = 'LIST ADDRESS'
 
-query_delay = 0.01
+query_delay = 0.08
 
 
 # local output folder

@@ -20,6 +20,8 @@ import logging
 # cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima che
 #  e' stata gia' importata
 
+error_messages = []
+
 os.chdir(output_path)
 seduta_file_pattern = senato_prefix + prefix_separator + seduta_prefix + \
                       prefix_separator + legislatura_id + prefix_separator
@@ -130,11 +132,12 @@ if results_sedute != -1:
                             total_result['votazioni'][votazione['votazione']] = results_votazione
 
                         else:
-                            send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
+                            error_messages.append("Connection refused for query vot: %s" % query_votazione)
+
+                else:
+                    error_messages.append("Connection refused for query seduta vot: %s" % query_seduta_votazioni)
 
 
-                    else:
-                        send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
                 write_file(output_path+
                            seduta_file_pattern+
                            seduta['numero']+".json",
@@ -145,10 +148,16 @@ if results_sedute != -1:
                 )
 
             else:
-                send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
+                error_messages.append("Connection refused for query seduta: %s" % query_seduta)
+
 
     else:
         print "nessuna nuova seduta"
         exit(1)
 else:
-    send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error","Connection refused")
+    error_messages.append("Connection refused for query sedute: %s" % query_sedute)
+
+# se ci sono stati errori manda una singola email con tutti gli errori
+if len(error_messages)>0:
+    error_message='<BR>'.join(error_messages)
+    send_email(smtp_server, notification_system,notification_list,"Sparql Senato: http error",error_message)
