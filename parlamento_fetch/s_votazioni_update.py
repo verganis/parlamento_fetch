@@ -10,14 +10,14 @@ import logging
 # controlla le votazioni presenti sul sito del Senato e le confronta con i file gia' salvati
 # nell'apposita cartella dati. se sono presenti nuove votazioni genera tre tipi di file:
 # * file con tutti i dati della votazione
-#  - votazione_LEGISLATURA_NUMEROSEDUTA_NUMEROVOTAZIONE.csv
+#  - votazione_LEGISLATURA_NUMEROSEDUTA_NUMEROVOTAZIONE.json
 # * aggiorna il file che mette in relazione la seduta con le relative votazioni
-#  - votazioni_LEGISLATURA_NUMEROSEDUTA.csv
+#  - votazioni_LEGISLATURA_NUMEROSEDUTA.json
 # * file con tutti i dati relativi alla seduta, se non e' gia presente
-#  - seduta_LEGISLATURA_NUMEROSEDUTA.csv
+#  - seduta_LEGISLATURA_NUMEROSEDUTA.json
 #  nel caso in cui non si riesca a connettere allo sparql endpoint manda una mail alla lista di admin
 
-# cerco il file che inizia con seduta_legislatura_*.csv e vedo qual e' l'ultima che
+# cerco il file che inizia con seduta_legislatura_*.json e vedo qual e' l'ultima che
 #  e' stata gia' importata
 
 error_messages = []
@@ -34,11 +34,11 @@ votazione_file_pattern = senato_prefix + prefix_separator + votazione_prefix + \
                          prefix_separator + legislatura_id + prefix_separator
 
 n_last_seduta = '0'
-sedute_file = sorted(glob.glob(seduta_file_pattern + "*.csv"), key=os.path.realpath)
+sedute_file = sorted(glob.glob(seduta_file_pattern + "*.json"), key=os.path.realpath)
 if len(sedute_file)>0:
     last_seduta_filename = sedute_file[-1]
 
-    seduta_reg_exp=re.compile('^'+seduta_file_pattern+'(.+).csv')
+    seduta_reg_exp=re.compile('^'+seduta_file_pattern+'(.+).json')
     n_last_seduta = seduta_reg_exp.match(last_seduta_filename).groups()[0]
 
 
